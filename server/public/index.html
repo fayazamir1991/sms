@@ -32,6 +32,10 @@
     <article><span>پیام‌های در صف</span><strong id="count-queue">—</strong><small>آخرین وضعیت همگام‌شده</small></article>
     <article><span>ارسال‌های گزارش‌شده</span><strong id="count-sent">—</strong><small>تأیید ارسال به شبکه از گوشی</small></article>
    </section>
+   <section class="reports" aria-label="نمودارهای آماری">
+    <div class="report-heading"><div><h2>نمای آماری گزارش</h2><p id="report-note" class="muted"></p></div><label class="period-label">بازهٔ روند<select id="report-days"><option value="7">۷ روز</option><option value="30" selected>۳۰ روز</option><option value="90">۹۰ روز</option></select></label></div>
+    <div id="report-charts" class="report-grid" aria-live="polite"></div>
+   </section>
    <section class="records">
     <div class="table-heading"><div><h2 id="table-title">بانک پیام‌ها</h2><p id="table-subtitle" class="muted">متن‌های پیشنهادی را ببین و ویرایش کن.</p></div>
      <div class="actions"><button id="refresh" class="secondary">↻ تازه‌سازی</button><button id="new-message" class="primary">＋ پیام جدید</button></div></div>

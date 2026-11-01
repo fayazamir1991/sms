@@ -14,6 +14,7 @@ COPY server/migrations/0004_web_frontier.sql ./migrations/0004_web_frontier.sql
 COPY server/migrations/0005_source_metadata.sql ./migrations/0005_source_metadata.sql
 COPY server/migrations/0007_catalog_offers.sql ./migrations/0007_catalog_offers.sql
 COPY server/migrations/0009_catalog_search.sql ./migrations/0009_catalog_search.sql
+COPY server/migrations/0010_reports.sql ./migrations/0010_reports.sql
 RUN node scripts/fetch-font.mjs && node scripts/build-seed.mjs && mkdir -p /data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

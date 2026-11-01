@@ -1,0 +1,24 @@
+import {createRequire} from 'node:module';import {readFileSync} from 'node:fs';import assert from 'node:assert/strict';import {TestD1} from '../test/d1.mjs';import {reportData} from '../src/admin-reports.mjs';
+const require=createRequire(import.meta.url),{JSDOM}=require(process.env.CHART_TEST_MODULES+'/jsdom');
+const db=new TestD1();
+for(let i=0;i<61;i++)await db.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(crypto.randomUUID(),'پیام تست '+i,'chart-'+i,i%2?'شعر':'کوتاه',Date.now()).run();
+await db.prepare('INSERT INTO installations(id,token_hash,app_version,created_at,last_seen_at) VALUES(?,?,?,?,?)').bind('fake-test-only','hash','<img src=x onerror=window.pwned=1>',Date.now(),Date.now()).run();
+const dom=new JSDOM(readFileSync(new URL('../public/index.html',import.meta.url),'utf8'),{url:'https://example.test',runScripts:'outside-only'});
+dom.window.fetch=async path=>{
+ const url=new URL(path,'https://example.test');
+ if(url.pathname==='/api/admin/session')return Response.json({csrf:'test-only'});
+ if(url.pathname==='/api/admin/stats')return Response.json({installations:1,devices:0,catalog:61,queue:0,sent:0});
+ if(url.pathname==='/api/admin/reports')return Response.json(await reportData(db,url.searchParams.get('table'),Number(url.searchParams.get('days'))));
+ if(url.pathname.startsWith('/api/admin/tables/'))return Response.json({rows:[],page:1,has_more:false});
+ throw new Error('Unexpected mock endpoint');
+};
+dom.window.eval(readFileSync(new URL('../public/admin.js',import.meta.url),'utf8'));
+const waitFor=async predicate=>{for(let i=0;i<100;i++){if(predicate())return;await new Promise(r=>setTimeout(r,10));}throw new Error('Chart rendering timed out');};
+await waitFor(()=>dom.window.document.querySelectorAll('.chart-card').length===9);
+assert.equal(dom.window.document.querySelectorAll('.chart-trend circle').length,30);
+const period=dom.window.document.getElementById('report-days');period.value='7';period.dispatchEvent(new dom.window.Event('change'));
+await waitFor(()=>dom.window.document.querySelectorAll('.chart-trend circle').length===7);
+dom.window.document.querySelector('[data-table="installations"]').click();
+await waitFor(()=>dom.window.document.querySelectorAll('.chart-card').length===3);
+assert.equal(dom.window.document.querySelectorAll('#report-charts img').length,0);assert.equal(dom.window.pwned,undefined);assert.ok(dom.window.document.getElementById('report-charts').textContent.includes('<img'));
+console.log('PASS: catalog charts, 7/30-day switching, report navigation, accessible SVG and text-safe labels.');dom.window.close();db.close();

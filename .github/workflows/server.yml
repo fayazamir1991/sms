@@ -21,6 +21,10 @@ jobs:
           node-version: '24'
       - run: npm test
         working-directory: server
+      - name: Verify chart rendering, navigation and text safety in a DOM
+        run: |
+          npm install --prefix "$RUNNER_TEMP/chart-check" --no-audit --no-fund jsdom@26.1.0
+          CHART_TEST_MODULES="$RUNNER_TEMP/chart-check/node_modules" node server/scripts/check-admin-charts.mjs
       - name: Build production Docker image
         run: docker build -t delneveshte-test .
       - name: Verify HTTP API, admin login and persistence across replacement containers

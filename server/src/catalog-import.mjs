@@ -1,3 +1,4 @@
+import {emotionalCouplet} from './poetry-selection.mjs';
 import {normalizeSearch} from './catalog-search.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import {existsSync,readFileSync} from 'node:fs';
@@ -18,7 +19,7 @@ export function suitable(text,language='fa'){
 export function ganjoorExcerpts(poem,author,revision='nightly'){
  const groups=new Map();for(const v of [...(poem.Verses||[])].sort((a,b)=>a.VOrder-b.VOrder))if(['Right','Left'].includes(v.Position)){const pair=groups.get(v.CoupletIndex)||[];pair.push(v);groups.set(v.CoupletIndex,pair);}
  const rows=[];for(const [i,pair]of groups)if(pair.length===2&&pair[0].Position==='Right'&&pair[1].Position==='Left'){
-  const text=pair.map(v=>v.Text.trim()).join('\n');if(reviewedGanjoor({text,source_url:'https://ganjoor.net'+poem.FullUrl+'#bn'+(i+1)}))rows.push({text,author,title:poem.Title||'',source:'ganjoor',source_url:'https://ganjoor.net'+poem.FullUrl+'#bn'+(i+1),language:'fa',rights:'classical-public-domain',source_revision:revision});
+  const text=pair.map(v=>v.Text.trim()).join('\n');if(reviewedGanjoor({text,source_url:'https://ganjoor.net'+poem.FullUrl+'#bn'+(i+1)})||emotionalCouplet(text,poem.FullTitle||poem.Title))rows.push({text,author,title:poem.Title||'',source:'ganjoor',source_url:'https://ganjoor.net'+poem.FullUrl+'#bn'+(i+1),language:'fa',rights:'classical-public-domain',source_revision:revision});
  }return rows;
 }
 export async function insertExcerpts(db,rows,limit=Infinity){
@@ -29,15 +30,17 @@ export async function insertExcerpts(db,rows,limit=Infinity){
   const statements=[];
   for(const row of rows.slice(start,start+100)){
    if(added+statements.length/2>=limit)break;
-   if(!row||!['fa','en'].includes(row.language)||typeof row.text!=='string'||!(row.source==='ganjoor'?reviewedGanjoor(row):suitable(row.text,row.language))||!row.author||!row.rights)continue;
+   if(!row||!['fa','en'].includes(row.language)||typeof row.text!=='string'||!(row.source==='ganjoor'?(reviewedGanjoor(row)||(row.selection_policy==='balanced-v3'&&emotionalCouplet(row.text,row.title))):suitable(row.text,row.language))||!row.author||!row.rights)continue;
    let url;try{url=new URL(row.source_url);}catch{continue;}
    if(url.protocol!=='https:'||(!['ganjoor.net','poetrydb.org'].includes(url.hostname)&&sourceOrigins.get(row.source)!==url.origin&&!(row.source==='x'&&url.hostname==='x.com')&&!(row.source==='instagram'&&url.hostname==='www.instagram.com')))continue;
    const key=contentKey(row.text);if(seen.has(key))continue;seen.add(key);
-   if(await db.prepare('SELECT 1 FROM catalog_origins WHERE content_key=?').bind(key).first())continue;
+   if(await db.prepare('SELECT 1 FROM catalog_origins WHERE content_key=?').bind(key).first()){
+    if(row.source==='ganjoor'&&row.selection_policy==='balanced-v3')await db.prepare('UPDATE catalog_origins SET selection_policy=?,selection_score=?,selection_signals=? WHERE content_key=?').bind(row.selection_policy,row.selection_score||0,JSON.stringify(row.selection_signals||[]),key).run();continue;
+   }
    const body=row.text.trim()+(/\p{Extended_Pictographic}/u.test(row.text)?'':' 💕');if(/نمناک|تاوبیو|تاومتن|گنجور|در این مطلب|در این مقاله|مطالب مرتبط/.test(body))continue;if(/[A-Za-z]/.test(body.normalize('NFKC')))continue;if(body.length>1200||/https?:|www\.|[a-z0-9-]+\.(com|ir|net|org)\b/i.test(body)||row.language!=='fa')continue;
    const id=randomUUID(),fp=sha(normalizeBody(body)),now=Date.now();
    statements.push(db.prepare('INSERT OR IGNORE INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,1,?,?)').bind(id,body,fp,['کوتاه','صمیمی'].includes(row.category)?row.category:'شعر',now,normalizeSearch(body)));
-   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_origins(catalog_id,content_key,source,source_url,author,title,language,rights,source_revision,imported_at,original_text,original_language,translation_provider,license_url) SELECT id,?,?,?,?,?,?,?,?,?,?,?,?,? FROM catalog_messages WHERE fingerprint=?').bind(key,row.source,row.source_url,row.author,row.title||'',row.language,row.rights,row.source_revision||'',now,row.original_text||row.text,row.original_language||row.language,row.translation_provider||'',row.license_url||'',fp));
+   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_origins(catalog_id,content_key,source,source_url,author,title,language,rights,source_revision,imported_at,original_text,original_language,translation_provider,license_url,selection_policy,selection_score,selection_signals) SELECT id,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM catalog_messages WHERE fingerprint=?').bind(key,row.source,row.source_url,row.author,row.title||'',row.language,row.rights,row.source_revision||'',now,row.original_text||row.text,row.original_language||row.language,row.translation_provider||'',row.license_url||'',row.selection_policy||'',row.selection_score||0,JSON.stringify(row.selection_signals||[]),fp));
   }
   if(statements.length){const results=await db.batch(statements);for(let i=0;i<results.length;i+=2)added+=results[i].meta.changes;}
   await new Promise(r=>setImmediate(r));
@@ -45,7 +48,7 @@ export async function insertExcerpts(db,rows,limit=Infinity){
 }
 export async function importBundledGanjoor(db){
  const file=new URL('../data/imports/ganjoor-v1.ndjson.gz',import.meta.url);if(!existsSync(file))return {available:false,added:0};
- const report=JSON.parse(readFileSync(new URL('../data/imports/ganjoor-report.json',import.meta.url),'utf8')),key='ganjoor-v2:'+report.output_sha256;
+ const report=JSON.parse(readFileSync(new URL('../data/imports/ganjoor-report.json',import.meta.url),'utf8')),key='ganjoor-balanced-v3:'+report.output_sha256;
  if((await db.prepare('SELECT status FROM catalog_jobs WHERE job=? AND run_key=?').bind('ganjoor-once',key).first())?.status==='complete')return {available:true,added:0,already_complete:true};
  const bytes=readFileSync(file);if(bytes.length>64*1024*1024||sha(bytes)!==report.output_sha256)throw new Error('Bundled Ganjoor checksum mismatch');
  const rows=gunzipSync(bytes,{maxOutputLength:256*1024*1024}).toString('utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line));

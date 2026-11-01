@@ -1,3 +1,4 @@
+import {reportData} from './admin-reports.mjs';
 import {browseCatalog} from './catalog-browse.mjs';
 import {normalizeSearch} from './catalog-search.mjs';
 import {sha256,equal,normalizeBody,encrypt,decrypt,hmac,bytesToBase64,base64ToBytes} from './crypto.mjs';
@@ -124,6 +125,9 @@ async function adminApi(request,env,path){
  }
  if(path==='/api/admin/session')return json({csrf:await hmac('csrf:'+session.id,env.SESSION_SIGNING_KEY)});
  if(path==='/api/admin/logout'&&request.method==='POST')return json({ok:true},200,{'Set-Cookie':`${COOKIE}=; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`});
+ if(path==='/api/admin/reports'&&request.method==='GET'){
+  const url=new URL(request.url),table=url.searchParams.get('table')||'catalog',days=Number(url.searchParams.get('days')||30);requireValue([7,30,90].includes(days));const report=await reportData(env.DB,table,days);if(!report)throw new HttpError(404,'گزارش پیدا نشد.');return json(report);
+ }
  if(path==='/api/admin/stats'&&request.method==='GET'){
   const results=await env.DB.batch([
    env.DB.prepare('SELECT COUNT(*) AS total,COUNT(DISTINCT device_hash) AS devices FROM installations'),

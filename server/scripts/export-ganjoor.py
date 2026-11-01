@@ -1,0 +1,72 @@
+"""Stream the entire pinned public Ganjoor export; retain only short classical love excerpts."""
+import argparse,collections,gzip,hashlib,html,json,re,sqlite3,tarfile,tempfile,time,unicodedata,urllib.request
+from pathlib import Path
+REVISION='34f4ab3e463903f9399d7ca208b9333911389f94'
+def normalized(text):
+    text=unicodedata.normalize('NFKD',text).replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
+    return ' '.join(''.join(c for c in text if not unicodedata.combining(c)).split())
+def romantic(text):
+    text=normalized(text)
+    if re.search(r'دشمن|نفرت|کشتن|خون|مرگ|جنازه|لعنت|جهنم|زنا|کافر|تجاوز|بمیر|ستمگر',text):return False
+    strong=re.findall(r'عشق|عاشق|معشوق|جانان|دلبر|دلبند|دلدار|دلداده|محبوب|دلارام',text)
+    personal=re.search(r'تو|تویی|ترا|لبت|لبان|زلف|آغوش|وصال|دیدار|بوسه|چشم|نگاه|یار|مهر|دلم|دل من',text)
+    return bool(strong and personal) or bool(re.search(r'دوستت دارم|دوست می دارم|در آغوش|بوسه.*لب|لب.*بوسه',text))
+def excerpts(poem):
+    groups=collections.defaultdict(list)
+    for verse in sorted(poem.get('Verses',[]),key=lambda v:v.get('VOrder',0)):
+        if verse.get('Position') in ('Right','Left'):groups[verse['CoupletIndex']].append(verse)
+    pairs=[]
+    for index,rows in sorted(groups.items()):
+        if len(rows)==2 and [v.get('Position') for v in rows]==['Right','Left']:
+            text='\n'.join(html.unescape(re.sub('<[^>]+>','',v['Text'])).strip() for v in rows)
+            if 30<=len(text)<=420 and romantic(text):pairs.append((index,text))
+    # One complete couplet per excerpt; never join unrelated lines or different poems.
+    return pairs
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--output',default='server/data/imports');parser.add_argument('--archive');args=parser.parse_args()
+    out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
+    report={'revision':REVISION,'schema':4,'poems_scanned':0,'poets_scanned':0,'romantic_candidates':0,'selected':0,'rights_excluded':0,'duplicates':0,'classification':'lexical conservative heuristic, not human review','excerpt_couplets':1}
+    with tempfile.TemporaryDirectory() as temp:
+        db=sqlite3.connect(Path(temp)/'candidates.sqlite');db.executescript('CREATE TABLE poets(slug TEXT PRIMARY KEY,name TEXT,eligible INTEGER);CREATE TABLE excerpts(slug TEXT,poem_id INTEGER,title TEXT,url TEXT,idx INTEGER,text TEXT);')
+        url='https://codeload.github.com/ganjoor/ganjoor-data/tar.gz/'+REVISION
+        response=open(args.archive,'rb') if args.archive else urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Delneveshte-catalog-import/1.0'}),timeout=180)
+        archive_hash=hashlib.sha256()
+        class Reader:
+            def read(self,n=-1):
+                chunk=response.read(n);archive_hash.update(chunk);return chunk
+        manifest=None
+        with response,tarfile.open(fileobj=Reader(),mode='r|gz') as archive:
+            for member in archive:
+                if not member.isfile() or not member.name.endswith('.json'):continue
+                path=member.name.split('/',1)[-1]
+                if path=='manifest.json':manifest=json.load(archive.extractfile(member));continue
+                if not path.startswith('poets/'):continue
+                if member.size>20_000_000:raise RuntimeError('Unexpected oversized dataset member')
+                data=json.load(archive.extractfile(member));slug=path.split('/')[1]
+                if path.endswith('/poet.json'):
+                    death=data.get('DeathYearInLHijri',0)
+                    eligible=data.get('ValidDeathDate',False) and isinstance(death,int) and 0<death<=1290
+                    db.execute('INSERT INTO poets VALUES(?,?,?)',(slug,data.get('Nickname') or data.get('Name') or slug,int(eligible)));report['poets_scanned']+=1
+                elif isinstance(data,dict) and isinstance(data.get('Verses'),list):
+                    report['poems_scanned']+=1
+                    for index,text in excerpts(data):
+                        db.execute('INSERT INTO excerpts VALUES(?,?,?,?,?,?)',(slug,data['Id'],data.get('Title',''),'https://ganjoor.net'+data['FullUrl'],index,text));report['romantic_candidates']+=1
+                    if report['poems_scanned']%10000==0:db.commit();print('Scanned poems:',report['poems_scanned'],flush=True)
+        db.commit()
+        if not manifest or manifest.get('SchemaVersion')!=4:raise RuntimeError('Missing or unsupported Ganjoor manifest')
+        if report['poems_scanned']!=manifest['PoemsCount'] or report['poets_scanned']!=manifest['PoetsCount']:raise RuntimeError('Incomplete corpus: manifest counts do not match scan')
+        seen=set()
+        with gzip.open(out/'ganjoor-v1.ndjson.gz','wt',encoding='utf-8') as output:
+            for slug,poem_id,title,url,index,text,author,eligible in db.execute('SELECT e.*,p.name,p.eligible FROM excerpts e LEFT JOIN poets p ON e.slug=p.slug ORDER BY poem_id,idx'):
+                if not eligible:report['rights_excluded']+=1;continue
+                key=normalized(text)
+                if key in seen:report['duplicates']+=1;continue
+                seen.add(key)
+                row={'text':text,'author':author,'title':title,'source_url':url+'#bn'+str(index+1),'source':'ganjoor','language':'fa','rights':'classical-public-domain; poet death <=1290 AH','source_revision':REVISION,'couplet_index':index}
+                output.write(json.dumps(row,ensure_ascii=False)+'\n');report['selected']+=1
+        report['archive_sha256']=archive_hash.hexdigest();report['manifest_poems']=manifest['PoemsCount'];report['manifest_poets']=manifest['PoetsCount'];report['completed_at_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
+        report['output_sha256']=hashlib.sha256((out/'ganjoor-v1.ndjson.gz').read_bytes()).hexdigest()
+        (out/'ganjoor-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+        print(json.dumps(report,ensure_ascii=False),flush=True)
+if __name__=='__main__':main()

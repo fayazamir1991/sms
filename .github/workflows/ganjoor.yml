@@ -1,0 +1,35 @@
+name: One-time complete Ganjoor corpus import
+on:
+  push:
+    branches: [main]
+    paths: ['server/scripts/export-ganjoor.py', '.github/workflows/ganjoor.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ganjoor-corpus-import
+  cancel-in-progress: false
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Process every poem in the pinned official Ganjoor corpus
+        run: python3 server/scripts/export-ganjoor.py
+      - name: Commit the deduplicated excerpts and corpus coverage report
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server/data/imports/ganjoor-v1.ndjson.gz server/data/imports/ganjoor-report.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Import complete Ganjoor snapshot love excerpts and processing report'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ganjoor-corpus-report
+          path: server/data/imports/ganjoor-report.json

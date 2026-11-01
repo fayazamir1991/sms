@@ -4,8 +4,8 @@
   "poems_scanned": 138382,
   "poets_scanned": 242,
   "romantic_candidates": 24,
-  "selected": 1,
-  "rights_excluded": 23,
+  "selected": 24,
+  "rights_excluded": 0,
   "duplicates": 0,
   "classification": "contextual reading by assistant; exact approved couplet allowlist",
   "selection_policy": "semantic-reviewed-v2",
@@ -14,6 +14,6 @@
   "archive_sha256": "e09a97e2809a9dde80497cab3531efa5ab017d4ad5ddfbddc9578eebe245c3f5",
   "manifest_poems": 138382,
   "manifest_poets": 242,
-  "completed_at_utc": "2026-11-01T20:22:39Z",
-  "output_sha256": "99803c8600d90c37d918f1626db691d2fb44265e99b92ded3accefe2c4c593e4"
+  "completed_at_utc": "2026-11-01T20:29:34Z",
+  "output_sha256": "c47bb965007d5f3f901341c834e5ee35e82b4f92b9537ac47aed1e8415953f98"
 }

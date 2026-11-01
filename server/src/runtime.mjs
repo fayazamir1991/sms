@@ -4,6 +4,8 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {handle} from './worker.mjs';
 import {SQLiteStore} from './sqlite.mjs';
+import {startCatalogJobs} from './catalog-jobs.mjs';
+import {importBundledGanjoor} from './catalog-import.mjs';
 
 export function settings(input=process.env){
  let bundled={};
@@ -31,7 +33,7 @@ function assets(){
 }
 export async function startServer(input=process.env){
  const config=settings(input),db=new SQLiteStore(config.database);
- try{db.migrate();}catch(error){db.close();throw error;}
+ try{db.migrate();await importBundledGanjoor(db);}catch(error){db.close();throw error;}
  const env={...config,DB:db,ASSETS:assets()};
  const server=createServer({maxHeaderSize:16384},async(incoming,outgoing)=>{
   try{
@@ -54,7 +56,8 @@ export async function startServer(input=process.env){
  server.requestTimeout=30000;server.headersTimeout=15000;server.keepAliveTimeout=5000;
  try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(config.port,config.host,resolve);});}
  catch(error){db.close();throw error;}
- return {server,db,async close(){await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));db.close();}};
+ const stopJobs=startCatalogJobs(db,input);
+ return {server,db,async close(){await stopJobs();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));db.close();}};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
  try{

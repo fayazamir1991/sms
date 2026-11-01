@@ -21,6 +21,7 @@ with tempfile.TemporaryDirectory() as directory:
     env = Path(directory) / 'runtime.env'
     env.write_text('\n'.join([
         'PUBLIC_URL=https://sms.example.test',
+        'CATALOG_NIGHTLY_ENABLED=false',
         'DATA_ENCRYPTION_KEY=' + base64.b64encode(secrets.token_bytes(32)).decode(),
         'SESSION_SIGNING_KEY=' + secrets.token_urlsafe(48),
         'ADMIN_TOKEN_SHA256=' + hashlib.sha256(password.encode()).hexdigest(),
@@ -45,7 +46,7 @@ assert.equal(login.status,200);
 const cookie=login.headers.get('set-cookie').split(';')[0],{csrf}=await login.json();
 const headers={Cookie:cookie,Origin:origin,'X-CSRF':csrf,'Content-Type':'application/json'};
 const stats=await (await fetch(base+'/api/admin/stats',{headers})).json();
-assert.equal(stats.catalog,1009);
+assert.ok(stats.catalog>=1009);
 assert.equal((await fetch(base+'/admin')).status,200);
 const font=await fetch(base+'/fonts/Vazirmatn.woff2');assert.equal(font.status,200);assert.equal(font.headers.get('content-type'),'font/woff2');assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0,4).toString(),'wOF2');
 assert.match(await (await fetch(base+'/admin.js')).text(),/use strict/);

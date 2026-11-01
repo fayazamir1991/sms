@@ -14,3 +14,5 @@
 # Everything else, including signing material, Android files and .env, is excluded.
 
 !server/scripts/fetch-font.mjs
+
+!server/migrations/0003_catalog_imports.sql

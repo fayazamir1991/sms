@@ -19,3 +19,5 @@ Primary backend deployment is Docker on Hamravesh: Node 24, persistent SQLite un
 The user requires each version to have a GitHub Release with an APK asset. Increment versionCode/versionName in app/build.gradle, add Persian notes under docs/releases/vVERSION.md, and let the successful main-branch workflow publish the version. Existing release tags/assets must not be silently overwritten. Releases remain experimental. Preserve the original chat-installed signing identity pinned in signing-certificate.sha256. Never generate a replacement signing key; refuse release publication on a mismatch. Never overwrite existing release assets.
 
 Build with JDK 17/21, Android SDK platform 35 and build-tools 35.0.0, Gradle 8.9 and Android Gradle Plugin 8.7.3. See docs/BUILD.md. Run the relevant compile, lint and CoreChecks validation when changing behavior. No unnecessary Android dependencies.
+
+Catalog imports must retain attribution, deduplicate excerpt text and preserve admin edits/deactivations. Full Ganjoor processing is one-time; nightly collection runs at 02:00 Asia/Tehran, cap 20/day by default. See docs/CATALOG-IMPORT.md.

@@ -9,6 +9,7 @@ COPY server/scripts/build-seed.mjs ./scripts/build-seed.mjs
 COPY server/scripts/fetch-font.mjs ./scripts/fetch-font.mjs
 COPY server/data ./data
 COPY server/migrations/0001_schema.sql ./migrations/0001_schema.sql
+COPY server/migrations/0003_catalog_imports.sql ./migrations/0003_catalog_imports.sql
 RUN node scripts/fetch-font.mjs && node scripts/build-seed.mjs && mkdir -p /data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

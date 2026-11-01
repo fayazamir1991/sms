@@ -233,6 +233,27 @@ public final class SmsRuntime {
         }
     }
 
+    /** New suggestions never enter the automatic queue when their intent is immediate sending. */
+    public static long sendNewNow(Context context, String text, Settings snapshot, String simLabel) {
+        synchronized (LOCK) {
+            Context app = context.getApplicationContext();
+            if (!snapshot.valid()) throw new IllegalStateException("تنظیمات ارسال را بررسی کن.");
+            String problem = transportIssue(app, snapshot.subscriptionId);
+            if (!problem.isEmpty()) throw new IllegalStateException(problem);
+            AppStore store = new AppStore(app);
+            long id = store.approveImmediate(text, snapshot, simLabel);
+            try {
+                sendLocked(app, store, store.get(id), false);
+            } catch (RuntimeException exception) {
+                store.failBeforeSend(id, exception.getMessage());
+                throw exception;
+            } finally {
+                reconcileLocked(app, store, System.currentTimeMillis());
+            }
+            return id;
+        }
+    }
+
     /** This entry point is only used after the UI's explicit immediate-send confirmation. */
     public static void sendApprovedNow(Context context, long id) {
         synchronized (LOCK) {

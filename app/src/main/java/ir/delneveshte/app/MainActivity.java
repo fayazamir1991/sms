@@ -219,10 +219,18 @@ public class MainActivity extends Activity {
     }
 
     private void suggestionsPage() {
-        heading("برای امروز، از دل انتخاب کن", "هر متنی را می‌توانی ویرایش کنی و بعد تأیید کنی.");
+        heading("برای امروز، از دل انتخاب کن", "پیام دلخواهت را به صف اضافه کن یا همین حالا بفرست.");
         LinearLayout intro = card(PALE);
         intro.addView(label("انتخاب تو، ارسال در زمان‌های متفاوت", 17, ROSE, true));
-        intro.addView(body("پیشنهادها از یک مجموعهٔ آفلاین انتخاب می‌شوند. فقط متن‌هایی که تأیید کرده‌ای، از سیم‌کارت خودت ارسال خواهند شد.", 14));
+        intro.addView(body("با «افزودن به صف»، همین متن برای ارسال در بازهٔ انتخابی تو ذخیره می‌شود.", 14));
+        ir.delneveshte.app.Settings saved = store.settings();
+        if (saved.valid()) {
+            intro.addView(phoneLabel(saved.recipient));
+            intro.addView(label(simLabel(saved.subscriptionId), 12, MUTED, false));
+        } else {
+            intro.addView(body("برای شروع، شمارهٔ همسرت و سیم‌کارت را در تنظیمات ذخیره کن.", 13));
+        }
+        if (!saved.enabled) intro.addView(body("ارسال خودکار خاموش است؛ پیام‌ها تا روشن‌کردن آن در صف می‌مانند.", 13));
         page.addView(intro);
         HorizontalScrollView categories = new HorizontalScrollView(this);
         categories.setHorizontalScrollBarEnabled(false);
@@ -249,10 +257,32 @@ public class MainActivity extends Activity {
             message.setPadding(0, dp(12), 0, dp(12));
             message.setTextIsSelectable(true);
             c.addView(message);
-            c.addView(button("ویرایش و تأیید", false, () -> editText(text)));
+            Button enqueue = actionButton("افزودن به صف", R.drawable.ic_queue, true, () -> { });
+            enqueue.setOnClickListener(v -> {
+                if (enqueueMessage(text)) {
+                    enqueue.setText("به صف اضافه شد");
+                    enqueue.setContentDescription("این پیام به صف اضافه شد");
+                    setButtonIcon(enqueue, R.drawable.ic_check, Color.WHITE);
+                    enqueue.setEnabled(false);
+                    enqueue.setAlpha(0.7f);
+                }
+            });
+            c.addView(enqueue);
+            LinearLayout actions = horizontal();
+            Button edit = actionButton("ویرایش و زمان‌بندی", R.drawable.ic_edit_schedule, false, () -> editText(text));
+            Button send = actionButton("ارسال فوری", R.drawable.ic_send, false, () -> confirmNewSend(text));
+            edit.setTextSize(13);
+            send.setTextSize(13);
+            edit.setMinHeight(dp(64));
+            send.setMinHeight(dp(64));
+            LinearLayout.LayoutParams editParams = weighted();
+            editParams.setMarginEnd(dp(8));
+            actions.addView(edit, editParams);
+            actions.addView(send, weighted());
+            add(c, actions, 8, 0);
             page.addView(c);
         }
-        page.addView(button("۵ پیشنهاد تازه", true, () -> { renewOptions(); render(); }));
+        page.addView(button("پیشنهادهای تازه", false, () -> { renewOptions(); render(); }));
         addPage(button("متن خودم را می‌نویسم", false, () -> editText("")), 10, 0);
     }
 
@@ -263,7 +293,9 @@ public class MainActivity extends Activity {
 
     private void editText(String initial) {
         LinearLayout content = dialogContent();
-        content.addView(body("متن نهایی را بنویس؛ در مرحلهٔ بعد شماره و سیم‌کارت را هم می‌بینی.", 14));
+        content.addView(body(store.settings().enabled
+                ? "متن را ویرایش کن و به صف اضافه کن؛ در بازهٔ زمانی تنظیم‌شده ارسال می‌شود."
+                : "متن را ویرایش کن و به صف اضافه کن؛ با روشن‌کردن ارسال خودکار، زمان‌بندی می‌شود.", 14));
         EditText editor = input(initial, "متن پیام", InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         editor.setMinLines(4);
@@ -271,9 +303,9 @@ public class MainActivity extends Activity {
         editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1200)});
         content.addView(editor, match());
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("متن تو")
+                .setTitle("ویرایش پیام")
                 .setView(content)
-                .setPositiveButton("بازبینی", null)
+                .setPositiveButton("افزودن به صف", null)
                 .setNegativeButton("انصراف", null).create();
         activeEditor = editor;
         activeEditorDialog = dialog;
@@ -286,50 +318,54 @@ public class MainActivity extends Activity {
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w -> {
             String text = editor.getText().toString().trim();
             if (text.isEmpty()) { editor.setError("متن پیام را وارد کن"); return; }
-            ir.delneveshte.app.Settings snapshot = store.settings().copy();
-            if (!snapshot.valid()) {
-                new AlertDialog.Builder(this).setTitle("ابتدا تنظیمات را کامل کن")
-                        .setMessage("شمارهٔ همسرت و سیم‌کارت ارسال‌کننده را در تنظیمات ذخیره کن؛ بعد همین متن را تأیید کن.")
-                        .setPositiveButton("تنظیمات", (d, which) -> { dialog.dismiss(); selectTab(3); })
-                        .setNegativeButton("برگشت به متن", null).show();
-                return;
-            }
-            String sim = simLabel(snapshot.subscriptionId);
-            if (!isActiveSim(snapshot.subscriptionId)) {
-                toast("سیم‌کارت ذخیره‌شده در دسترس نیست؛ آن را در تنظیمات دوباره انتخاب کن.");
-                return;
-            }
-            showApproval(text, snapshot, sim, dialog);
+            if (enqueueMessage(text)) dialog.dismiss();
         }));
         dialog.show();
     }
 
-    private void showApproval(String text, ir.delneveshte.app.Settings snapshot,
-                              String sim, AlertDialog editorDialog) {
-        LinearLayout content = dialogContent();
-        content.addView(label("گیرنده", 12, MUTED, true));
-        content.addView(phoneLabel(snapshot.recipient));
-        content.addView(body(sim, 14));
-        content.addView(divider());
-        TextView exact = body(text, 17);
-        exact.setTextIsSelectable(true);
-        content.addView(exact);
-        content.addView(body(partsHint(text, snapshot.subscriptionId), 12));
-        content.addView(body("همین متن، با همین گیرنده و سیم‌کارت در صف قرار می‌گیرد. زمان ارسال را برنامه در بازهٔ انتخابی تو تعیین می‌کند.", 13));
-        new AlertDialog.Builder(this).setTitle("تأیید متن و مقصد")
-                .setView(scrollDialog(content))
-                .setPositiveButton("تأیید و افزودن به صف", (d, which) -> {
-                    try {
-                        store.approve(text, snapshot, sim);
-                        if (store.settings().enabled) SmsRuntime.reconcile(this);
-                        editorDialog.dismiss();
-                        toast("به صف تأییدشده اضافه شد");
-                        selectTab(1);
-                    } catch (RuntimeException error) {
-                        toast("ذخیرهٔ پیام انجام نشد. تنظیمات شماره و سیم‌کارت را بررسی کن.");
-                    }
-                })
-                .setNegativeButton("بازگشت به ویرایش", null).show();
+    private ir.delneveshte.app.Settings snapshotForAction() {
+        ir.delneveshte.app.Settings snapshot = store.settings().copy();
+        if (!snapshot.valid()) {
+            toast("ابتدا شمارهٔ همسرت و سیم‌کارت را در تنظیمات ذخیره کن.");
+            return null;
+        }
+        if (!SmsRuntime.hasSimPermission(this)) { explainSimPermission(); return null; }
+        if (!isActiveSim(snapshot.subscriptionId)) {
+            toast("سیم‌کارت انتخابی در دسترس نیست؛ تنظیمات را بررسی کن.");
+            return null;
+        }
+        return snapshot;
+    }
+
+    private boolean enqueueMessage(String text) {
+        ir.delneveshte.app.Settings snapshot = snapshotForAction();
+        if (snapshot == null) return false;
+        try {
+            store.approve(text, snapshot, simLabel(snapshot.subscriptionId));
+        } catch (RuntimeException error) {
+            toast("پیام ذخیره نشد؛ دوباره تلاش کن.");
+            return false;
+        }
+        if (store.settings().enabled) {
+            try {
+                SmsRuntime.reconcile(this);
+                toast("به صف اضافه شد؛ در بازهٔ انتخابی ارسال می‌شود.");
+            } catch (RuntimeException error) {
+                toast("به صف اضافه شد؛ زمان‌بندی نیاز به بررسی دارد.");
+            }
+        } else {
+            toast("به صف اضافه شد؛ برای ارسال، ارسال خودکار را روشن کن.");
+        }
+        return true;
+    }
+
+    private void confirmNewSend(String text) {
+        ir.delneveshte.app.Settings snapshot = snapshotForAction();
+        if (snapshot == null) return;
+        if (!SmsRuntime.hasSendPermission(this)) { explainSmsPermission(); return; }
+        showSendConfirmation(text, snapshot.recipient, snapshot.subscriptionId,
+                simLabel(snapshot.subscriptionId), () -> SmsRuntime.sendNewNow(this, text, snapshot,
+                        simLabel(snapshot.subscriptionId)));
     }
 
     private void queuePage() {
@@ -362,7 +398,7 @@ public class MainActivity extends Activity {
                 c.addView(body("این پیام با مقصد و سیم‌کارت زمان تأیید ارسال می‌شود؛ تنظیمات تازه آن را تغییر نداده است.", 12));
             }
             LinearLayout actions = horizontal();
-            Button sendNow = button("ارسال همین حالا", false, () -> confirmSendNow(message));
+            Button sendNow = actionButton("ارسال فوری", R.drawable.ic_send, false, () -> confirmSendNow(message));
             Button cancel = button("حذف از صف", false, () -> cancelMessage(message));
             actions.addView(sendNow, weighted());
             LinearLayout.LayoutParams cp = weighted();
@@ -396,19 +432,24 @@ public class MainActivity extends Activity {
             toast("سیم‌کارت تأییدشدهٔ این پیام در دسترس نیست.");
             return;
         }
+        showSendConfirmation(message.body, message.recipient, message.subscriptionId, message.simLabel,
+                () -> SmsRuntime.sendApprovedNow(this, message.id));
+    }
+
+    private void showSendConfirmation(String text, String recipient, int subscriptionId,
+                                      String sim, Runnable send) {
         LinearLayout content = dialogContent();
-        content.addView(body("با انتخاب دکمهٔ زیر، همین حالا یک پیامک واقعی از سیم‌کارت تو ارسال می‌شود؛ حتی اگر ارسال خودکار متوقف باشد.", 14));
-        content.addView(phoneLabel(message.recipient));
-        content.addView(body(message.simLabel, 14));
+        content.addView(body("این پیام همین حالا از سیم‌کارت انتخابی ارسال می‌شود، حتی اگر ارسال خودکار خاموش باشد.", 14));
+        content.addView(phoneLabel(recipient));
+        content.addView(body(sim, 14));
         content.addView(divider());
-        content.addView(body(message.body, 17));
-        content.addView(body(partsHint(message.body, message.subscriptionId), 12));
-        content.addView(body("برای آزمون اولیه، بعد از ارسال، گفت‌وگوی همین شماره را در Google Messages بررسی کن.", 13));
-        new AlertDialog.Builder(this).setTitle("ارسال پیامک واقعی")
+        content.addView(body(text, 17));
+        content.addView(body(partsHint(text, subscriptionId), 12));
+        new AlertDialog.Builder(this).setTitle("تأیید ارسال فوری")
                 .setView(scrollDialog(content))
-                .setPositiveButton("همین حالا ارسال کن", (d, which) -> {
+                .setPositiveButton("ارسال پیامک", (d, which) -> {
                     try {
-                        SmsRuntime.sendApprovedNow(this, message.id);
+                        send.run();
                         toast("نتیجهٔ ارسال را در سابقه ببین.");
                         selectTab(2);
                     } catch (RuntimeException error) {
@@ -727,6 +768,7 @@ public class MainActivity extends Activity {
         if ("SENT".equals(status)) return "✓  ارسال به شبکه تأیید شد";
         if ("SENDING".equals(status)) return "◷  در انتظار نتیجهٔ شبکه";
         if ("FAILED".equals(status)) return "ارسال ناموفق";
+        if ("IMMEDIATE".equals(status)) return "در انتظار ارسال فوری";
         if ("UNCERTAIN".equals(status)) return "نتیجه نامشخص؛ بدون تکرار خودکار";
         if ("CANCELLED".equals(status)) return "حذف‌شده از صف";
         return status;
@@ -828,6 +870,20 @@ public class MainActivity extends Activity {
         view.setLayoutParams(match());
         view.setOnClickListener(v -> action.run());
         return view;
+    }
+
+    private Button actionButton(String title, int icon, boolean primary, Runnable action) {
+        Button view = button(title, primary, action);
+        setButtonIcon(view, icon, primary ? Color.WHITE : ROSE);
+        return view;
+    }
+
+    private void setButtonIcon(Button view, int icon, int color) {
+        android.graphics.drawable.Drawable drawable = getDrawable(icon).mutate();
+        drawable.setTint(color);
+        drawable.setBounds(0, 0, dp(20), dp(20));
+        view.setCompoundDrawablesRelative(drawable, null, null, null);
+        view.setCompoundDrawablePadding(dp(6));
     }
 
     private EditText input(String text, String hint, int type) {

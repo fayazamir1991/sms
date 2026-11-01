@@ -14,6 +14,13 @@ public class CoreChecks {
   for(String category:TextBank.categories())for(int i=0;i<100;i++){
    List<String> texts=TextBank.suggestions(category,"",new Random(i));
    if(texts.size()!=5||new HashSet<>(texts).size()!=5)throw new AssertionError("duplicate candidates");
+   for(String text:texts){
+    if(text.codePoints().noneMatch(cp->cp>=0x1F000||(cp>=0x2600&&cp<=0x27BF)))throw new AssertionError("missing romantic emoji");
+    if(category.equals("شعر")){
+     String[] lines=text.split("\n");
+     if(lines.length!=3||!lines[2].startsWith("— "))throw new AssertionError("verse attribution changed");
+    }
+   }
   }
   Settings s=new Settings();if(s.valid())throw new AssertionError("missing settings allowed");
   s.recipient="+989121234567";s.subscriptionId=1;if(!s.valid())throw new AssertionError("valid settings rejected");

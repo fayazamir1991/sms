@@ -3,9 +3,11 @@ import os
 import subprocess
 import zipfile
 import xml.etree.ElementTree as ET
+from scripts.version import read_version
 from pathlib import Path
 
 root = Path(__file__).resolve().parent
+version_code, version_name = read_version(root)
 if not os.environ.get('ANDROID_HOME') or not os.environ.get('JAVA_HOME'):
     raise SystemExit('Set ANDROID_HOME to the Android SDK and JAVA_HOME to JDK 17 or 21 before building.')
 sdk = Path(os.environ['ANDROID_HOME'])
@@ -24,8 +26,8 @@ manifest.getroot().set('package', 'ir.delneveshte.app')
 manifest.write(out/'AndroidManifest.xml', encoding='utf-8', xml_declaration=True)
 run(tools/'aapt2', 'compile', '--dir', root/'app/src/main/res', '-o', out/'resources.zip')
 run(tools/'aapt2', 'link', '-I', android, '--manifest', out/'AndroidManifest.xml',
-    '--min-sdk-version', '26', '--target-sdk-version', '34', '--version-code', '1',
-    '--version-name', '0.1.0', '--java', out/'generated', '-o', out/'base.apk', out/'resources.zip')
+    '--min-sdk-version', '26', '--target-sdk-version', '34', '--version-code', str(version_code),
+    '--version-name', version_name, '--java', out/'generated', '-o', out/'base.apk', out/'resources.zip')
 sources = sorted((root/'app/src/main/java').rglob('*.java')) + sorted((out/'generated').rglob('*.java'))
 run(jdk/'bin/javac', '-encoding', 'UTF-8', '-source', '17', '-target', '17',
     '-classpath', android, '-d', out/'classes', *sources)
@@ -42,7 +44,7 @@ if not key.exists():
     run(jdk/'bin/keytool', '-genkeypair', '-keystore', key, '-storepass', 'android',
         '-keypass', 'android', '-alias', 'androiddebugkey', '-dname',
         'CN=Android Debug,O=Delneveshte,C=IR', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '3650')
-apk = out/'delneveshte-0.1.0.apk'
+apk = out/('delneveshte-' + version_name + '.apk')
 run(jdk/'bin/java', '-jar', tools/'lib/apksigner.jar', 'sign', '--ks', key,
     '--ks-pass', 'pass:android', '--key-pass', 'pass:android', '--out', apk, out/'aligned.apk')
 run(jdk/'bin/java', '-jar', tools/'lib/apksigner.jar', 'verify', '--verbose', apk)

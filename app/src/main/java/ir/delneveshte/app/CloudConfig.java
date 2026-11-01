@@ -16,10 +16,8 @@ public final class CloudConfig {
     private final SharedPreferences prefs;
     public CloudConfig(Context c) { app=c.getApplicationContext();prefs=app.getSharedPreferences("cloud",0); }
     public String baseUrl() { return prefs.getString("url",BuildConfig.API_BASE_URL); }
-    public boolean enabled() { return prefs.getBoolean("enabled",false)&&!baseUrl().isEmpty(); }
+    public boolean enabled() { return prefs.getBoolean("enabled",true)&&!baseUrl().isEmpty(); }
     public int generation() { return prefs.getInt("generation",0); }
-    public boolean prompted() { return prefs.getBoolean("prompted",false); }
-    public void setPrompted() { prefs.edit().putBoolean("prompted",true).apply(); }
     public long lastSync() { return prefs.getLong("last_sync",0); }
     public long lastCatalog() { return prefs.getLong("last_catalog",0); }
     public String lastError() { return prefs.getString("error",""); }
@@ -27,7 +25,7 @@ public final class CloudConfig {
         String normalized=normalizeUrl(url);
         if(enabled&&normalized.isEmpty())throw new IllegalArgumentException("آدرس HTTPS سرور را وارد کن.");
         if(!prefs.edit().putString("url",normalized).putBoolean("enabled",enabled)
-                .putBoolean("prompted",true).putInt("generation",generation()+1).putString("error","").commit())
+                .putInt("generation",generation()+1).putString("error","").commit())
             throw new IllegalStateException("ذخیرهٔ تنظیمات همگام‌سازی انجام نشد.");
     }
     public static String normalizeUrl(String value) {

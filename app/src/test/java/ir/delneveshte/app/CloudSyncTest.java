@@ -89,9 +89,13 @@ public class CloudSyncTest {
         store.replaceCatalog("کوتاه",new JSONArray());assertTrue(store.hasCachedCatalog("کوتاه"));assertTrue(store.cachedSuggestions("کوتاه","جانم").isEmpty());
         assertEquals("جانم، کنار تو آرامم 🫂",store.get(message).body);
     }
+    @Test public void explicitDisableIsPreservedAfterReopeningSettings() {
+        CloudConfig cloud=new CloudConfig(app);assertTrue(cloud.enabled());
+        cloud.configure(cloud.baseUrl(),false);assertFalse(new CloudConfig(app).enabled());
+    }
     @Test public void credentialsPersistAcrossConfigInstances() {
         CloudConfig first=new CloudConfig(app),second=new CloudConfig(app);
         assertEquals(first.installationId(),second.installationId());assertEquals(first.credential(),second.credential());
-        assertEquals(64,first.credential().length());assertFalse(first.enabled());
+        assertEquals(64,first.credential().length());assertTrue(first.enabled());
     }
 }

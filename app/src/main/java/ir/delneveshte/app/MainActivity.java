@@ -112,7 +112,6 @@ public class MainActivity extends Activity {
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         if (store.settings().enabled) SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
-        maybeOfferCloudSync();
         render();
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
@@ -587,19 +586,7 @@ public class MainActivity extends Activity {
         addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "\nصف همیشه ابتدا روی گوشی ذخیره می‌شود. همگام‌سازی به اینترنت و اجازهٔ اجرای پس‌زمینه نیاز دارد.", 12), 0, 0);
     }
 
-    private static final String CLOUD_DISCLOSURE = "با فعال‌کردن همگام‌سازی، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";
-
-    private void maybeOfferCloudSync() {
-        CloudConfig cloud=new CloudConfig(this);
-        if(cloud.prompted()||cloud.baseUrl().isEmpty()||activeEditorDialog!=null)return;
-        cloud.setPrompted();
-        new AlertDialog.Builder(this).setTitle("همگام‌سازی با سرور")
-                .setMessage(CLOUD_DISCLOSURE)
-                .setPositiveButton("فعال‌کردن",(dialog,which)->{
-                    cloud.configure(cloud.baseUrl(),true);CloudScheduler.ensure(this);render();
-                    toast("همگام‌سازی با اتصال به اینترنت انجام می‌شود");
-                }).setNegativeButton("فعلاً نه",null).show();
-    }
+    private static final String CLOUD_DISCLOSURE = "همگام‌سازی به‌صورت پیش‌فرض فعال است. هنگام اتصال به اینترنت، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";
 
     private void cloudSettings() {
         CloudConfig cloud=new CloudConfig(this);

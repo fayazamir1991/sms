@@ -1,6 +1,6 @@
 # Architecture
 
-The Android app keeps its approved queue locally and can opt into HTTPS server synchronization. MainActivity provides four Persian RTL views: suggestions, approved queue, send history, and settings. The server supplies a catalog cached on the phone; TextBank remains the fallback until the first catalog download. Server responses cannot enqueue or send an SMS.
+The Android app keeps its approved queue locally and synchronizes with the HTTPS server by default, with disclosure and a disable control in settings. MainActivity provides four Persian RTL views: suggestions, approved queue, send history, and settings. The server supplies a catalog cached on the phone; TextBank remains the fallback until the first catalog download. Server responses cannot enqueue or send an SMS.
 
 Settings and install credentials are stored in app-private preferences. AppStore owns SQLite records with immutable approved body, destination and subscription ID. Database migration v1 to v2 adds synchronization metadata without deleting existing messages. Queue state changes, revisions and durable outbox events commit together; multipart callbacks are deduplicated by message and part index. JobScheduler uploads pending snapshots when network and Android scheduling permit. Only matching acknowledgements remove transmitted events, so concurrent newer local changes remain pending.
 

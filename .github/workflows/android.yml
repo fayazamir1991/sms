@@ -3,7 +3,7 @@ name: Android build
 on:
   push:
     branches: [main]
-    paths: ['app/**', 'scripts/**', 'signing-certificate.sha256', '*.gradle', 'gradle.properties', '.github/workflows/android.yml']
+    paths: ['app/**', 'scripts/**', 'release-input/**', 'signing-certificate.sha256', '*.gradle', 'gradle.properties', '.github/workflows/android.yml']
   pull_request:
   workflow_dispatch:
 
@@ -43,13 +43,27 @@ jobs:
           mkdir -p build/core-checks
           javac -encoding UTF-8 -d build/core-checks app/src/main/java/ir/delneveshte/app/Settings.java app/src/main/java/ir/delneveshte/app/Message.java app/src/main/java/ir/delneveshte/app/SchedulePlanner.java app/src/main/java/ir/delneveshte/app/TextBank.java app/src/test/java/ir/delneveshte/app/CoreChecks.java
           java -cp build/core-checks ir.delneveshte.app.CoreChecks
-      - name: Restore the original signing key for compatible updates
+      - name: Locate an already signed release candidate
+        id: prepared
         if: github.event_name != 'pull_request'
+        run: |
+          candidate="release-input/delneveshte-$(python3 scripts/version.py).apk"
+          if test -f "$candidate"; then echo "path=$candidate" >> "$GITHUB_OUTPUT"; fi
+      - name: Restore the original signing key for compatible updates
+        if: github.event_name != 'pull_request' && steps.prepared.outputs.path == ''
         run: python3 scripts/restore-signing.py
       - name: Build and verify the distributable APK
         if: github.event_name != 'pull_request'
+        env:
+          PREPARED_APK: ${{ steps.prepared.outputs.path }}
         run: |
-          gradle --no-daemon :app:assembleRelease :app:lintRelease
+          if test -n "$PREPARED_APK"; then
+            python3 scripts/verify-prepared-apk.py
+            mkdir -p app/build/outputs/apk/release
+            cp "$PREPARED_APK" app/build/outputs/apk/release/app-release.apk
+          else
+            gradle --no-daemon :app:assembleRelease :app:lintRelease
+          fi
           python3 scripts/verify-apk-signing.py app/build/outputs/apk/release/app-release.apk
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'

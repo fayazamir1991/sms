@@ -1,7 +1,7 @@
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 export class TestD1 {
- constructor(){this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec(readFileSync(new URL('../migrations/0001_schema.sql',import.meta.url),'utf8'));this.sqlite.exec(readFileSync(new URL('../migrations/0003_catalog_imports.sql',import.meta.url),'utf8'));this.sqlite.exec(readFileSync(new URL('../migrations/0004_web_frontier.sql',import.meta.url),'utf8'));}
+ constructor(){this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec(readFileSync(new URL('../migrations/0001_schema.sql',import.meta.url),'utf8'));this.sqlite.exec(readFileSync(new URL('../migrations/0003_catalog_imports.sql',import.meta.url),'utf8'));this.sqlite.exec(readFileSync(new URL('../migrations/0004_web_frontier.sql',import.meta.url),'utf8'));this.sqlite.exec(readFileSync(new URL('../migrations/0005_source_metadata.sql',import.meta.url),'utf8'));}
  prepare(sql){return new Statement(this.sqlite,sql);}
  async batch(statements){this.sqlite.exec('BEGIN');try{const out=[];for(const s of statements)out.push(await s.execute());this.sqlite.exec('COMMIT');return out;}catch(e){this.sqlite.exec('ROLLBACK');throw e;}}
  close(){this.sqlite.close();}

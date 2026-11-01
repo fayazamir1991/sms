@@ -212,6 +212,7 @@ public final class AppStore {
                 db.delete("catalog_cache","category=?",new String[]{category});
                 for(int i=0;i<rows.length();i++) {
                     JSONObject row=rows.getJSONObject(i);ContentValues v=new ContentValues();
+                    app.getSharedPreferences("catalog_metadata",0).edit().putString(row.getString("body"),row.toString()).apply();
                     v.put("id",row.getString("id"));v.put("body",row.getString("body"));v.put("category",category);
                     db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
                 }
@@ -233,12 +234,22 @@ public final class AppStore {
             finally { db.endTransaction(); }
         }
     }
+    public String catalogCredit(String text) {
+        try {
+            JSONObject row=new JSONObject(app.getSharedPreferences("catalog_metadata",0).getString(text,"{}"));
+            return "منبع: "+row.optString("source","بانک دل‌نوشته")+" · "+row.optString("author","")+"\n"+row.optString("source_url","")+"\n"+row.optString("rights","");
+        }catch(Exception error){return "بانک دل‌نوشته";}
+    }
     public List<String> cachedSuggestions(String category,String nickname) {
         String name=nickname==null?"":nickname.trim().replaceAll("\\s+"," ");if(name.isEmpty())name="عزیزم";
         synchronized(LOCK) {
             List<String> out=new ArrayList<>();
             try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache"+("همه".equals(category)?"":" WHERE category=?")+" ORDER BY RANDOM() LIMIT 5","همه".equals(category)?null:new String[]{category})) {
-                while(c.moveToNext())out.add(c.getString(0).replace("{name}",name));
+                while(c.moveToNext()){
+                    String raw=c.getString(0),rendered=raw.replace("{name}",name);
+                    String meta=app.getSharedPreferences("catalog_metadata",0).getString(raw,"{}");
+                    app.getSharedPreferences("catalog_metadata",0).edit().putString(rendered,meta).apply();out.add(rendered);
+                }
             }
             return out;
         }

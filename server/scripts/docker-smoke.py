@@ -46,7 +46,7 @@ assert.equal(login.status,200);
 const cookie=login.headers.get('set-cookie').split(';')[0],{csrf}=await login.json();
 const headers={Cookie:cookie,Origin:origin,'X-CSRF':csrf,'Content-Type':'application/json'};
 const stats=await (await fetch(base+'/api/admin/stats',{headers})).json();
-assert.ok(stats.catalog>=1009);
+assert.ok(stats.catalog>=1002);
 assert.equal((await fetch(base+'/admin')).status,200);
 const font=await fetch(base+'/fonts/Vazirmatn.woff2');assert.equal(font.status,200);assert.equal(font.headers.get('content-type'),'font/woff2');assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0,4).toString(),'wOF2');
 assert.match(await (await fetch(base+'/admin.js')).text(),/use strict/);

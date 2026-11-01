@@ -18,3 +18,5 @@
 !server/migrations/0003_catalog_imports.sql
 
 !server/migrations/0004_web_frontier.sql
+
+!server/migrations/0005_source_metadata.sql

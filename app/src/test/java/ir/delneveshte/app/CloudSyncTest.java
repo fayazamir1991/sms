@@ -93,6 +93,14 @@ public class CloudSyncTest {
         CloudConfig cloud=new CloudConfig(app);assertTrue(cloud.enabled());
         cloud.configure(cloud.baseUrl(),false);assertFalse(new CloudConfig(app).enabled());
     }
+    @Test public void sourceMetadataNeverBecomesApprovedSmsBody() throws Exception {
+        AppStore store=new AppStore(app);String body="دوستت دارم و کنار تو آرامم 💕";
+        store.replaceCatalog("کوتاه",new JSONArray().put(new JSONObject().put("id",UUID.randomUUID().toString()).put("body",body).put("source","namnak").put("author","نویسنده").put("source_url","https://namnak.com/example")));
+        String selected=store.cachedSuggestions("کوتاه","جانم").get(0);
+        assertTrue(store.catalogCredit(selected).contains("https://namnak.com/example"));
+        long id=store.approve(selected,settings,"SIM");assertEquals(body,store.get(id).body);
+        assertFalse(store.get(id).body.contains("namnak"));
+    }
     @Test public void credentialsPersistAcrossConfigInstances() {
         CloudConfig first=new CloudConfig(app),second=new CloudConfig(app);
         assertEquals(first.installationId(),second.installationId());assertEquals(first.credential(),second.credential());

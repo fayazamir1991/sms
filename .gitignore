@@ -22,3 +22,5 @@ server/migrations/0002_initial_catalog.sql
 
 # Verified public APKs may be handed to CI without exposing their signing key.
 !release-input/*.apk
+
+server/migrations/0006_clean_catalog.sql

@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {translateCandidates} from '../src/translation.mjs';
+const row={text:'My love for you grows every day.',language:'en',rights:'test'};
+test('English is excluded without a translator and on translation failure',async()=>{assert.equal((await translateCandidates([row],{})).length,0);assert.equal((await translateCandidates([row],{TRANSLATE_URL:'https://translator.test'},async()=>new Response('fail',{status:500}))).length,0);});
+test('successful Persian translation preserves original text in metadata',async()=>{const rows=await translateCandidates([row],{TRANSLATE_URL:'https://translator.test'},async()=>Response.json({translatedText:'عشق من به تو هر روز بیشتر می‌شود.'}));assert.equal(rows[0].language,'fa');assert.equal(rows[0].original_text,row.text);assert.equal(rows[0].original_language,'en');});

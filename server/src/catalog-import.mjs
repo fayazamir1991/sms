@@ -31,10 +31,10 @@ export async function insertExcerpts(db,rows,limit=Infinity){
    if(url.protocol!=='https:'||(!['ganjoor.net','poetrydb.org'].includes(url.hostname)&&sourceOrigins.get(row.source)!==url.origin&&!(row.source==='x'&&url.hostname==='x.com')&&!(row.source==='instagram'&&url.hostname==='www.instagram.com')))continue;
    const key=contentKey(row.text);if(seen.has(key))continue;seen.add(key);
    if(await db.prepare('SELECT 1 FROM catalog_origins WHERE content_key=?').bind(key).first())continue;
-   const body=row.text+'\n— '+row.author+' 💕\n'+(row.source==='poetrydb'?'PoetryDB · CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ · ':row.source==='ganjoor'?'گنجور · ':(row.source_label||row.source)+' · '+(row.license_url||'')+' · ')+row.source_url;if(body.length>1200)continue;
+   const body=row.text.trim()+(/\p{Extended_Pictographic}/u.test(row.text)?'':' 💕');if(/نمناک|تاوبیو|تاومتن|گنجور|در این مطلب|در این مقاله|مطالب مرتبط/.test(body))continue;if(body.length>1200||/https?:|www\.|[a-z0-9-]+\.(com|ir|net|org)\b/i.test(body)||row.language!=='fa')continue;
    const id=randomUUID(),fp=sha(normalizeBody(body)),now=Date.now();
    statements.push(db.prepare('INSERT OR IGNORE INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(id,body,fp,['کوتاه','صمیمی'].includes(row.category)?row.category:'شعر',now));
-   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_origins(catalog_id,content_key,source,source_url,author,title,language,rights,source_revision,imported_at) SELECT id,?,?,?,?,?,?,?,?,? FROM catalog_messages WHERE fingerprint=?').bind(key,row.source,row.source_url,row.author,row.title||'',row.language,row.rights,row.source_revision||'',now,fp));
+   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_origins(catalog_id,content_key,source,source_url,author,title,language,rights,source_revision,imported_at,original_text,original_language,translation_provider,license_url) SELECT id,?,?,?,?,?,?,?,?,?,?,?,?,? FROM catalog_messages WHERE fingerprint=?').bind(key,row.source,row.source_url,row.author,row.title||'',row.language,row.rights,row.source_revision||'',now,row.original_text||row.text,row.original_language||row.language,row.translation_provider||'',row.license_url||'',fp));
   }
   if(statements.length){const results=await db.batch(statements);for(let i=0;i<results.length;i+=2)added+=results[i].meta.changes;}
   await new Promise(r=>setImmediate(r));

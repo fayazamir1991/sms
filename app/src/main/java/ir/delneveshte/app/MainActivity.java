@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
     private int currentTab;
     private String category;
     private List<String> options = new ArrayList<>();
+    private final java.util.Map<String,String> credits=new java.util.HashMap<>();
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
             if (!isFinishing() && (currentTab == 1 || currentTab == 2)) renderKeepingScroll();
@@ -77,6 +78,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         store = new AppStore(this);
         draft = store.settings().copy();
+        android.content.SharedPreferences format=getSharedPreferences("catalog_format",0);
+        if(format.getInt("version",0)<2){store.clearCatalog();new CloudConfig(this).catalogUpdatedReset();format.edit().putInt("version",2).apply();}
         String[] categories = TextBank.categories();
         category = categories.length == 0 ? "همه" : categories[0];
         if (savedInstanceState != null) {
@@ -262,6 +265,7 @@ public class MainActivity extends Activity {
             message.setPadding(0, dp(12), 0, dp(12));
             message.setTextIsSelectable(true);
             c.addView(message);
+            c.addView(body(credits.getOrDefault(text,"بانک دل‌نوشته"),12));
             Button enqueue = actionButton("افزودن به صف", R.drawable.ic_queue, true, () -> { });
             enqueue.setOnClickListener(v -> {
                 if (enqueueMessage(text)) {
@@ -295,6 +299,11 @@ public class MainActivity extends Activity {
         String nickname = draft == null ? "عزیزم" : draft.nickname;
         options = store.hasCachedCatalog(category) ? store.cachedSuggestions(category,nickname)
                 : TextBank.suggestions(category, nickname, random);
+        java.util.List<String> clean=new ArrayList<>();credits.clear();
+        for(String raw:options){String[] parts=raw.split("\\n—",2);String text=parts[0].trim();
+            if(text.matches("(?s).*https?://.*")||text.matches("(?s).*[A-Za-z]{3,}.*"))continue;
+            credits.put(text,parts.length>1?"شاعر: "+parts[1]:store.catalogCredit(raw));clean.add(text);
+        }options=clean;
     }
 
     private void editText(String initial) {

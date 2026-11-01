@@ -1,3 +1,4 @@
+import {translateCandidates} from './translation.mjs';
 import {collectSocial} from './social-collector.mjs';
 import {collectWeb} from './web-collector.mjs';
 import {randomInt} from 'node:crypto';
@@ -30,7 +31,7 @@ export async function runNightly(db,{now=new Date(),limit=20,fetcher=fetch}={}){
  const old=await db.prepare('SELECT * FROM catalog_jobs WHERE job=? AND run_key=?').bind('nightly',slot.day).first();if(old?.status==='complete'||old&&Date.now()-old.started_at<30*60*1000)return {skipped:true};
  await db.prepare("INSERT INTO catalog_jobs(job,run_key,status,started_at) VALUES('nightly',?,'running',?) ON CONFLICT(job,run_key) DO UPDATE SET status='running',started_at=excluded.started_at").bind(slot.day,Date.now()).run();
  try{
-  const collected=await collectNightly(fetcher,db),added=await insertExcerpts(db,collected.rows,Math.max(0,limit-(old?.added||0)));
+  const collected=await collectNightly(fetcher,db),added=await insertExcerpts(db,await translateCandidates(collected.rows),Math.max(0,limit-(old?.added||0)));
   await db.prepare('UPDATE catalog_jobs SET status=?,finished_at=?,added=added+?,detail=? WHERE job=? AND run_key=?').bind(collected.failures.length?'partial':'complete',Date.now(),added,JSON.stringify({sources_ok:collected.successes,failed_sources:collected.failures,social_status:collected.social_status}),'nightly',slot.day).run();return {added,partial:collected.failures.length>0};
  }catch(error){await db.prepare("UPDATE catalog_jobs SET status='failed',finished_at=?,detail='Import failed; will retry' WHERE job='nightly' AND run_key=?").bind(Date.now(),slot.day).run();throw error;}
 }

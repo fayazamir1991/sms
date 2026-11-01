@@ -55,8 +55,9 @@
     "pathPrefix": "/",
     "language": "fa",
     "label": "نمناک",
-    "rights": "Reuse permission not verified; discovery only",
-    "mode": "discovery"
+    "rights": "Site administrator explicitly authorized reuse in project conversation on 2026-11-01",
+    "mode": "content",
+    "author": "نمناک"
   },
   {
     "id": "taw-bio",
@@ -66,7 +67,8 @@
     "pathPrefix": "/",
     "language": "fa",
     "label": "تاوبیو",
-    "rights": "Publisher permission required by site terms; discovery only",
-    "mode": "discovery"
+    "rights": "Site administrator explicitly authorized reuse in project conversation on 2026-11-01",
+    "mode": "content",
+    "author": "تاوبیو"
   }
 ]

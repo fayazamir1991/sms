@@ -46,8 +46,8 @@ async function suggestions(request,env){
  const limit=Number(url.searchParams.get('limit')||'20');
  requireValue(number(limit,1,50));requireValue(category==='همه'||CATEGORIES.has(category));
  const query=category==='همه'
-  ?env.DB.prepare('SELECT id,body,category FROM catalog_messages WHERE active=1 ORDER BY RANDOM() LIMIT ?').bind(limit)
-  :env.DB.prepare('SELECT id,body,category FROM catalog_messages WHERE active=1 AND category=? ORDER BY RANDOM() LIMIT ?').bind(category,limit);
+  ?env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 ORDER BY RANDOM() LIMIT ?').bind(limit)
+  :env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 AND c.category=? ORDER BY RANDOM() LIMIT ?').bind(category,limit);
  const {results}=await query.all();return json({messages:results,source:'server'});
 }
 function validateMessage(m){
@@ -130,6 +130,7 @@ async function adminApi(request,env,path){
  if(path==='/api/admin/catalog'&&request.method==='POST'){
   const b=await readJson(request);requireValue(typeof b.body==='string'&&b.body.trim().length>0&&b.body.length<=2400&&CATEGORIES.has(b.category));
   requireValue(b.id==null||UUID.test(b.id));requireValue(b.active==null||typeof b.active==='boolean');
+  requireValue(!/https?:|www\.|[a-z0-9-]+\.(com|ir|net|org)\b/i.test(b.body)&&!/[a-z]{3,}/i.test(b.body),'متن پیام باید فارسی و بدون لینک باشد.');
   const id=b.id||crypto.randomUUID(),fp=await sha256(normalizeBody(b.body));
   const existing=await env.DB.prepare('SELECT id FROM catalog_messages WHERE fingerprint=?').bind(fp).first();
   if(existing&&existing.id!==id)throw new HttpError(409,'این متن قبلاً در بانک پیام‌ها ثبت شده است.');

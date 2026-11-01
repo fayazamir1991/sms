@@ -284,6 +284,9 @@ public final class SmsRuntime {
     }
 
     private static void sendLocked(Context app, AppStore store, Message message, boolean scheduled) {
+        if(java.util.regex.Pattern.compile("https?://|www\\.|[a-z0-9-]+\\.(com|ir|net|org)\\b",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(message.body).find()){
+            store.failBeforeSend(message.id,"این پیام لینک دارد؛ متن بدون لینک را دوباره انتخاب و تأیید کن.");return;
+        }
         String problem = transportIssue(app, message.subscriptionId);
         if (!problem.isEmpty()) throw new IllegalStateException(problem);
         if (message.body == null || message.body.trim().isEmpty()

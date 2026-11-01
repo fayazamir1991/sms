@@ -24,11 +24,6 @@ export function catalog(){
    unique.set(fingerprint,{id:stableId(fingerprint),body,fingerprint,category});
   }
  }
- for(const entry of JSON.parse(readFileSync(new URL('data/initial/06-poetry.json',root),'utf8'))){
-  const fingerprint=hash(normalizeBody(entry.body));
-  if(unique.has(fingerprint))throw new Error('Duplicate classical verse');
-  unique.set(fingerprint,{id:stableId(fingerprint),body:entry.body,fingerprint,category:'شعر'});
- }
  if(unique.size<1000)throw new Error(`At least 1000 unique authored messages are required; found ${unique.size}`);
  return [...unique.values()];
 }
@@ -44,5 +39,6 @@ export function seedSql(){
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const result=seedSql();mkdirSync(new URL('migrations/',root),{recursive:true});
  writeFileSync(new URL('migrations/0002_initial_catalog.sql',root),result.sql);
+ writeFileSync(new URL('migrations/0006_clean_catalog.sql',root),"DELETE FROM catalog_origins; DELETE FROM catalog_messages; DELETE FROM catalog_jobs; DELETE FROM seed_runs;\n"+result.sql);
  console.log(`Prepared deployment seed job: ${result.count} unique initial messages.`);
 }

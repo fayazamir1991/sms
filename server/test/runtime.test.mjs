@@ -19,7 +19,7 @@ test('persistent SQLite migrations and seed preserve admin edits and private log
  const dir=mkdtempSync(join(tmpdir(),'sms-runtime-')),file=join(dir,'messages.sqlite');let db;
  try{
   db=new SQLiteStore(file);db.migrate();
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1009);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
   const row=await db.prepare('SELECT id FROM catalog_messages LIMIT 1').first();
   await db.prepare('UPDATE catalog_messages SET body=? WHERE id=?').bind('متن مدیر محفوظ می‌ماند 🌷',row.id).run();
   const env={DB:db,DATA_ENCRYPTION_KEY:Buffer.alloc(32,2).toString('base64'),SESSION_SIGNING_KEY:'a'.repeat(48),ADMIN_TOKEN_SHA256:await sha256('test-password-only')};
@@ -29,8 +29,8 @@ test('persistent SQLite migrations and seed preserve admin edits and private log
   const message={id:crypto.randomUUID(),body:'با تو زندگی زیباست 🌷❤️',recipient:'+989121234567',sim_id:7,status:'SENT',revision:3,approved_at:1000,submitted_at:2000,events:[]};
   assert.equal((await handle(post('/api/v1/sync',{messages:[message]}),env)).status,200);
   db.close();db=new SQLiteStore(file);db.migrate();
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,4);
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1009);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,6);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
   assert.equal((await db.prepare('SELECT body FROM catalog_messages WHERE id=?').bind(row.id).first()).body,'متن مدیر محفوظ می‌ماند 🌷');
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM sent_logs').first()).n,1);
   const privateRow=await db.prepare('SELECT body_cipher,recipient_cipher FROM queued_messages').first();
@@ -44,5 +44,18 @@ test('SQLite batch rolls back every write when one statement fails',async()=>{
   const before=(await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n;
   await assert.rejects(db.batch([db.prepare('DELETE FROM catalog_messages'),db.prepare('INSERT INTO nonexistent_table VALUES(1)')]));
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,before);
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('catalog rebuild deletes old suggestions once and preserves installation records',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'sms-reset-')),db=new SQLiteStore(join(dir,'db.sqlite'));db.migrate();
+ try{
+  await db.prepare("INSERT INTO installations(id,token_hash,app_version,created_at,last_seen_at) VALUES('preserved','secret-hash','0.4.0',1,1)").run();
+  await db.prepare("INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES('old','https://old.example old body','old','شعر',1,1)").run();
+  await db.prepare("DELETE FROM app_migrations WHERE name='0006_clean_catalog.sql'").run();db.migrate();
+  assert.equal(await db.prepare("SELECT id FROM catalog_messages WHERE id='old'").first(),null);
+  assert.equal((await db.prepare("SELECT id FROM installations WHERE id='preserved'").first()).id,'preserved');
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
+  const row=await db.prepare('SELECT id FROM catalog_messages LIMIT 1').first();await db.prepare('UPDATE catalog_messages SET body=? WHERE id=?').bind('ویرایش پس از بازسازی',row.id).run();db.migrate();assert.equal((await db.prepare('SELECT body FROM catalog_messages WHERE id=?').bind(row.id).first()).body,'ویرایش پس از بازسازی');
  }finally{db.close();rmSync(dir,{recursive:true,force:true});}
 });

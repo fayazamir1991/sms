@@ -7,7 +7,7 @@ const row={text:'دلبر من، با تو در آغوش عشق آرام می‌
 test('catalog imports deduplicate normalized text, preserve admin edits and keep source credits',async()=>{
  const db=new TestD1();try{
  assert.equal(await insertExcerpts(db,[row,{...row,author:'نام دیگر'}]),1);
- const original=await db.prepare('SELECT * FROM catalog_messages').first();assert.match(original.body,/ganjoor.net/);
+ const original=await db.prepare('SELECT * FROM catalog_messages').first();assert.equal(original.body,row.text+' 💕');assert.ok(!original.body.includes('ganjoor.net'));assert.equal((await db.prepare('SELECT source_url FROM catalog_origins').first()).source_url,row.source_url);
  await db.prepare('UPDATE catalog_messages SET body=?,active=0 WHERE id=?').bind('ویرایش مدیر',original.id).run();
  assert.equal(await insertExcerpts(db,[row]),0);assert.equal((await db.prepare('SELECT active FROM catalog_messages').first()).active,0);
  assert.equal(contentKey('دلِ من، عاشق توست ❤️'),contentKey('دل من عاشق توست 🌷'));

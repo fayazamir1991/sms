@@ -47,7 +47,7 @@ public class MessageActionsTest {
         SubscriptionManager manager = app.getSystemService(SubscriptionManager.class);
         shadowOf(manager).setActiveSubscriptionInfoList(Collections.singletonList(
                 SubscriptionInfoBuilder.newBuilder().setId(7).setSimSlotIndex(0)
-                        .setDisplayName("SIM 1").build()));
+                        .setDisplayName("SIM 1").buildSubscriptionInfo()));
         store = new AppStore(app);
         settings = new Settings();
         settings.recipient = "+989121234567";

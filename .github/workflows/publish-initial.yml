@@ -1,0 +1,23 @@
+name: Publish initial release
+
+on:
+  push:
+    branches: ['release/0.1.0']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Publish verified initial APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.1.0 >/dev/null 2>&1; then exit 0; fi
+          gh run download 41284805394 --name delneveshte-debug-apk --dir "$RUNNER_TEMP/initial"
+          mv "$RUNNER_TEMP/initial/app-debug.apk" "$RUNNER_TEMP/delneveshte-0.1.0.apk"
+          gh release create v0.1.0 "$RUNNER_TEMP/delneveshte-0.1.0.apk" --target "$GITHUB_SHA" --title "دل‌نوشته 0.1.0" --notes "نسخهٔ آزمایشی اولیه با پیشنهاد متن، انتخاب سیم‌کارت، صف تأییدشده و زمان‌بندی تصادفی. APK از ساخت موفق اولیه است؛ ارسال واقعی باید روی گوشی بررسی شود." --prerelease

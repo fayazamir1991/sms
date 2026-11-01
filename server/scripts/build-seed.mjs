@@ -40,5 +40,6 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  const result=seedSql();mkdirSync(new URL('migrations/',root),{recursive:true});
  writeFileSync(new URL('migrations/0002_initial_catalog.sql',root),result.sql);
  writeFileSync(new URL('migrations/0006_clean_catalog.sql',root),"DELETE FROM catalog_origins; DELETE FROM catalog_messages; DELETE FROM catalog_jobs; DELETE FROM seed_runs;\n"+result.sql);
+ writeFileSync(new URL('migrations/0008_full_rebuild.sql',root),"DELETE FROM catalog_offers; DELETE FROM sent_logs; DELETE FROM message_events; DELETE FROM queued_messages; DELETE FROM catalog_origins; DELETE FROM catalog_messages; DELETE FROM installations; DELETE FROM catalog_jobs; DELETE FROM catalog_web_pages; DELETE FROM seed_runs;\n"+result.sql);
  console.log(`Prepared deployment seed job: ${result.count} unique initial messages.`);
 }

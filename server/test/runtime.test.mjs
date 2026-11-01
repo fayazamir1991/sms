@@ -29,7 +29,7 @@ test('persistent SQLite migrations and seed preserve admin edits and private log
   const message={id:crypto.randomUUID(),body:'با تو زندگی زیباست 🌷❤️',recipient:'+989121234567',sim_id:7,status:'SENT',revision:3,approved_at:1000,submitted_at:2000,events:[]};
   assert.equal((await handle(post('/api/v1/sync',{messages:[message]}),env)).status,200);
   db.close();db=new SQLiteStore(file);db.migrate();
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,7);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,9);
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
   assert.equal((await db.prepare('SELECT body FROM catalog_messages WHERE id=?').bind(row.id).first()).body,'متن مدیر محفوظ می‌ماند 🌷');
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM sent_logs').first()).n,1);
@@ -57,5 +57,18 @@ test('catalog rebuild deletes old suggestions once and preserves installation re
   assert.equal((await db.prepare("SELECT id FROM installations WHERE id='preserved'").first()).id,'preserved');
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
   const row=await db.prepare('SELECT id FROM catalog_messages LIMIT 1').first();await db.prepare('UPDATE catalog_messages SET body=? WHERE id=?').bind('ویرایش پس از بازسازی',row.id).run();db.migrate();assert.equal((await db.prepare('SELECT body FROM catalog_messages WHERE id=?').bind(row.id).first()).body,'ویرایش پس از بازسازی');
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('explicit full rebuild clears installations, synced queue, event logs and catalog exactly once',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'sms-full-reset-')),db=new SQLiteStore(join(dir,'db.sqlite'));db.migrate();
+ try{
+  await db.prepare("INSERT INTO installations(id,token_hash,app_version,created_at,last_seen_at) VALUES('erase','hash','old',1,1)").run();
+  await db.prepare("INSERT INTO queued_messages(installation_id,id,body_cipher,recipient_cipher,content_hash,status,sim_id,revision,approved_at,updated_at) VALUES('erase','msg','cipher','cipher','hash','SENT',1,1,1,1)").run();
+  await db.prepare("INSERT INTO sent_logs VALUES('erase','msg',1,1)").run();
+  await db.prepare("INSERT INTO message_events VALUES('erase','event','msg','SENT',1,1)").run();
+  await db.prepare("DELETE FROM app_migrations WHERE name='0008_full_rebuild.sql'").run();db.migrate();
+  for(const table of ['installations','queued_messages','sent_logs','message_events'])assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM '+table).first()).n,0);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
  }finally{db.close();rmSync(dir,{recursive:true,force:true});}
 });

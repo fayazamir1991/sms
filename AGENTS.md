@@ -21,3 +21,5 @@ The user requires each version to have a GitHub Release with an APK asset. Incre
 Build with JDK 17/21, Android SDK platform 35 and build-tools 35.0.0, Gradle 8.9 and Android Gradle Plugin 8.7.3. See docs/BUILD.md. Run the relevant compile, lint and CoreChecks validation when changing behavior. No unnecessary Android dependencies.
 
 Catalog imports must retain attribution, deduplicate excerpt text and preserve admin edits/deactivations. Full Ganjoor processing is one-time; nightly collection runs at 02:00 Asia/Tehran, cap 20/day by default. See docs/CATALOG-IMPORT.md.
+
+Version 0.7 requirements: Namnak is excluded. Ganjoor publication uses the explicitly context-reviewed exact-couplet allowlist in server/data/ganjoor-reviewed.json, never keyword presence alone. Migration 0008 is the owner-authorized one-time FULL server data reset; do not repeat it on future deployments. Browse/search pages hold 20 messages and append via a signed stable cursor; SMS approval snapshots remain immutable. Source details belong only in the card overflow menu.

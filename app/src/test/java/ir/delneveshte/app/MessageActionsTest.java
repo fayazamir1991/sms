@@ -42,6 +42,7 @@ public class MessageActionsTest {
         field.set(null, null);
         app.deleteDatabase("messages.db");
         app.getSharedPreferences("settings", 0).edit().clear().commit();
+        app.getSharedPreferences("catalog_format",0).edit().putInt("version",3).commit();
         app.getSharedPreferences("cloud", 0).edit().clear().putBoolean("enabled",false).putLong("last_catalog",System.currentTimeMillis()).commit();
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(
                 Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS);
@@ -65,7 +66,7 @@ public class MessageActionsTest {
             click(action);
             assertEquals(1, store.queue().size());
             assertNull(ShadowAlertDialog.getLatestAlertDialog());
-            assertNotNull(findText(activity.getWindow().getDecorView(), "پیشنهادهای تازه"));
+            assertNotNull(findText(activity.getWindow().getDecorView(), "بارگذاری پیام‌های بیشتر"));
             assertTrue(ShadowToast.getTextOfLatestToast().contains("ارسال خودکار را روشن کن"));
             assertFalse(action.isEnabled());
             Settings changed = settings.copy();
@@ -145,6 +146,26 @@ public class MessageActionsTest {
         store.recordPart(id, 1, true, "");
         assertEquals("SENT", store.get(id).status);
         assertTrue(store.queue().isEmpty());
+    }
+
+    @Test public void browseLoadsTwentyThenAppendsAndSearchesWithoutLosingEarlierCards() throws Exception {
+        org.json.JSONArray rows=new org.json.JSONArray();
+        for(int i=0;i<45;i++)rows.put(new org.json.JSONObject().put("id",java.util.UUID.randomUUID().toString()).put("body","یاد تو "+(i%2==0?"باران":"لبخند")+" پیام "+i+" 💕").put("category","کوتاه").put("source","taw-bio").put("source_url","https://taw-bio.ir/source"));
+        store.replaceCatalog("کوتاه",rows);
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity activity=controller.get();assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۲۰"));
+            TextView initial=findPrefix(activity.getWindow().getDecorView(),"یاد تو ");assertNotNull(initial);String first=initial.getText().toString();
+            assertNull(findPrefix(activity.getWindow().getDecorView(),"منبع:"));
+            click(findText(activity.getWindow().getDecorView(),"بارگذاری پیام‌های بیشتر"));
+            assertNotNull(findText(activity.getWindow().getDecorView(),first));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۴۰"));
+            click(findText(activity.getWindow().getDecorView(),"بارگذاری پیام‌های بیشتر"));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۴۵"));
+            EditText query=findType(activity.getWindow().getDecorView(),EditText.class);query.setText("باران");click(findText(activity.getWindow().getDecorView(),"جست‌وجو"));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۲۰"));
+            assertNull(findPrefix(activity.getWindow().getDecorView(),"یاد تو لبخند"));
+        }
+    }
+    private static TextView findPrefix(View root,String prefix){
+        if(root instanceof TextView&&((TextView)root).getText().toString().startsWith(prefix))return (TextView)root;
+        if(root instanceof ViewGroup){ViewGroup group=(ViewGroup)root;for(int i=0;i<group.getChildCount();i++){TextView found=findPrefix(group.getChildAt(i),prefix);if(found!=null)return found;}}return null;
     }
 
     private static void click(View view) {

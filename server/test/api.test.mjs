@@ -92,3 +92,24 @@ test('suggestion batches prefer content not previously offered to the same insta
  const first=await get(),second=await get();assert.equal(first.size,5);assert.equal(second.size,5);assert.ok([...first].every(id=>!second.has(id)));
  env.DB.close();
 });
+
+test('browse pages contain 20 distinct items and a stable cursor appends without repeats',async()=>{
+ const env=await environment();await register(env);
+ for(let i=0;i<47;i++)await env.DB.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,1,?,?)').bind(crypto.randomUUID(),'دلم کنار تو آرام است '+i,'browse-'+i,'کوتاه',Date.now(),'دلم کنار تو آرام است '+i).run();
+ let path='/api/v1/messages/browse',seen=new Set(),sizes=[];
+ for(;;){const response=await handle(request(path),env);assert.equal(response.status,200);const page=await response.json();sizes.push(page.messages.length);for(const row of page.messages){assert.ok(!seen.has(row.id));seen.add(row.id);}if(!page.has_more)break;path='/api/v1/messages/browse?cursor='+encodeURIComponent(page.next_cursor);}
+ assert.deepEqual(sizes,[20,20,7]);assert.equal(seen.size,47);env.DB.close();
+});
+test('substring search matches the middle of a phrase, normalizes Persian and treats wildcard input literally',async()=>{
+ const env=await environment();await register(env);
+ const {normalizeSearch}=await import('../src/catalog-search.mjs');
+ for(const [i,body]of ['قبل از بَاران کنار تو آرامم بعد از باران','پیشوند كي خوب است پسوند','عشق 100% با تو','عشق عادی'].entries())await env.DB.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,1,?,?)').bind(crypto.randomUUID(),body,'search-'+i,'صمیمی',Date.now(),normalizeSearch(body)).run();
+ const query=async q=>(await (await handle(request('/api/v1/messages/browse?q='+encodeURIComponent(q)),env)).json()).messages;
+ assert.equal((await query('باران')).length,1);assert.equal((await query('کی')).length,1);assert.equal((await query('%')).length,1);assert.equal((await query("' OR 1=1 --")).length,0);env.DB.close();
+});
+test('browse cursor cannot be used with a different query or modified signature',async()=>{
+ const env=await environment();await register(env);for(let i=0;i<21;i++)await env.DB.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(crypto.randomUUID(),'پیام '+i,'cursor-'+i,'کوتاه',Date.now()).run();
+ const first=await (await handle(request('/api/v1/messages/browse'),env)).json();
+ assert.equal((await handle(request('/api/v1/messages/browse?q=other&cursor='+encodeURIComponent(first.next_cursor)),env)).status,410);
+ assert.equal((await handle(request('/api/v1/messages/browse?cursor='+encodeURIComponent(first.next_cursor+'bad')),env)).status,410);env.DB.close();
+});

@@ -28,7 +28,7 @@ public final class CloudSync {
                 if(System.currentTimeMillis()-config.lastCatalog()>30*60*1000L) {
                     for(String category:TextBank.categories()) {
                         if("همه".equals(category))continue;
-                        JSONObject response=api.request("/api/v1/messages/suggestions?limit=40&category="+URLEncoder.encode(category,"UTF-8"),null);
+                        JSONObject response=api.request("/api/v1/messages/browse?category="+URLEncoder.encode(category,"UTF-8"),null);
                         JSONArray messages=response.getJSONArray("messages");
                         if(messages.length()>50)throw new IllegalStateException("پاسخ بانک پیام‌ها معتبر نیست.");
                         for(int i=0;i<messages.length();i++){

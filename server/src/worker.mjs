@@ -1,3 +1,5 @@
+import {browseCatalog} from './catalog-browse.mjs';
+import {normalizeSearch} from './catalog-search.mjs';
 import {sha256,equal,normalizeBody,encrypt,decrypt,hmac,bytesToBase64,base64ToBytes} from './crypto.mjs';
 
 const STATES=new Set(['APPROVED','SCHEDULED','IMMEDIATE','SENDING','SENT','FAILED','UNCERTAIN','CANCELLED']);
@@ -137,9 +139,9 @@ async function adminApi(request,env,path){
   const id=b.id||crypto.randomUUID(),fp=await sha256(normalizeBody(b.body));
   const existing=await env.DB.prepare('SELECT id FROM catalog_messages WHERE fingerprint=?').bind(fp).first();
   if(existing&&existing.id!==id)throw new HttpError(409,'این متن قبلاً در بانک پیام‌ها ثبت شده است.');
-  await env.DB.prepare(`INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,?,?)
-   ON CONFLICT(id) DO UPDATE SET body=excluded.body,fingerprint=excluded.fingerprint,category=excluded.category,active=excluded.active`)
-   .bind(id,b.body.trim(),fp,b.category,b.active===false?0:1,Date.now()).run();return json({id});
+  await env.DB.prepare(`INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,?,?,?)
+   ON CONFLICT(id) DO UPDATE SET body=excluded.body,fingerprint=excluded.fingerprint,category=excluded.category,active=excluded.active,search_text=excluded.search_text`)
+   .bind(id,b.body.trim(),fp,b.category,b.active===false?0:1,Date.now(),normalizeSearch(b.body)).run();return json({id});
  }
  if(path.startsWith('/api/admin/tables/')&&request.method==='GET'){
   const table=path.split('/').pop(),url=new URL(request.url),page=Number(url.searchParams.get('page')||1);
@@ -167,6 +169,7 @@ export async function handle(request,env){
   if(path==='/healthz')return json({ok:true,service:'delneveshte'});
   if(!env.DB)throw new HttpError(503,'دیتابیس سرور آماده نیست.');
   if(path==='/api/v1/installations/register'&&request.method==='POST')return await register(request,env);
+  if(path==='/api/v1/messages/browse'&&request.method==='GET')return await browseCatalog(request,env,await authenticate(request,env));
   if(path==='/api/v1/messages/suggestions'&&request.method==='GET')return await suggestions(request,env);
   if(path==='/api/v1/sync'&&request.method==='POST')return await sync(request,env);
   if(path==='/api/admin/login'&&request.method==='POST')return await adminLogin(request,env);

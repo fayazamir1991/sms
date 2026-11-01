@@ -3,7 +3,7 @@ import {collectSocial} from './social-collector.mjs';
 import {collectWeb} from './web-collector.mjs';
 import {randomInt} from 'node:crypto';
 import {ganjoorExcerpts,importBundledGanjoor,insertExcerpts,suitable} from './catalog-import.mjs';
-const sources=[{path:'/hafez/ghazal',author:'حافظ'},{path:'/saadi/divan/ghazals',author:'سعدی'},{path:'/moulavi/shams/ghazalsh',author:'مولانا'}];
+const sources=[]; // Ganjoor is imported only from the explicitly reviewed one-time dataset.
 const englishAuthors=new Set(['William Shakespeare','Percy Bysshe Shelley','John Keats','Elizabeth Barrett Browning','Robert Browning','Emily Dickinson','Robert Burns','Lord Byron','George Gordon, Lord Byron','Christina Rossetti']);
 export async function fetchJson(url,fetcher=fetch){
  const response=await fetcher(url,{headers:{'User-Agent':'DelneveshteCatalog/1.0 (+https://github.com/fayazamir1991/sms)'},signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('Source HTTP '+response.status);

@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {TestD1} from './d1.mjs';
 import {insertExcerpts,contentKey,ganjoorExcerpts,suitable} from '../src/catalog-import.mjs';
 import {runNightly,tehranSlot,fetchJson} from '../src/catalog-jobs.mjs';
-const row={text:'دلبر من، با تو در آغوش عشق آرام می‌گیرم\nبه دیدارت شکوفا می‌شود هر روز دل من',author:'شاعر تست',source:'ganjoor',source_url:'https://ganjoor.net/test/sh1',language:'fa',rights:'public-domain',title:'تست'};
+const row={text:'دلبر من، با تو در آغوش عشق آرام می‌گیرم\nبه دیدارت شکوفا می‌شود هر روز دل من',author:'شاعر تست',source:'taw-bio',source_url:'https://taw-bio.ir/test/sh1',language:'fa',rights:'public-domain',title:'تست'};
 test('catalog imports deduplicate normalized text, preserve admin edits and keep source credits',async()=>{
  const db=new TestD1();try{
  assert.equal(await insertExcerpts(db,[row,{...row,author:'نام دیگر'}]),1);
- const original=await db.prepare('SELECT * FROM catalog_messages').first();assert.equal(original.body,row.text+' 💕');assert.ok(!original.body.includes('ganjoor.net'));assert.equal((await db.prepare('SELECT source_url FROM catalog_origins').first()).source_url,row.source_url);
+ const original=await db.prepare('SELECT * FROM catalog_messages').first();assert.equal(original.body,row.text+' 💕');assert.ok(!original.body.includes('taw-bio.ir'));assert.equal((await db.prepare('SELECT source_url FROM catalog_origins').first()).source_url,row.source_url);
  await db.prepare('UPDATE catalog_messages SET body=?,active=0 WHERE id=?').bind('ویرایش مدیر',original.id).run();
  assert.equal(await insertExcerpts(db,[row]),0);assert.equal((await db.prepare('SELECT active FROM catalog_messages').first()).active,0);
  assert.equal(contentKey('دلِ من، عاشق توست ❤️'),contentKey('دل من عاشق توست 🌷'));
@@ -20,10 +20,12 @@ test('catalog writes and origin records commit together, and each run obeys its 
  assert.equal(await insertExcerpts(db,[{...row,source_url:'http://localhost/private'}]),0);
  }finally{db.close();}
 });
-test('Ganjoor excerpts retain exactly two paired hemistiches, never summaries or broken verses',()=>{
- const poem={Title:'تست',FullUrl:'/hafez/test',Verses:[{VOrder:1,CoupletIndex:0,Position:'Right',Text:row.text.split('\n')[0]},{VOrder:2,CoupletIndex:0,Position:'Left',Text:row.text.split('\n')[1]},{VOrder:3,CoupletIndex:1,Position:'Right',Text:'عشق تو'}],PoemSummary:'معاصر'};
- const rows=ganjoorExcerpts(poem,'حافظ');assert.equal(rows.length,1);assert.equal(rows[0].text,row.text);assert.ok(!rows[0].text.includes('معاصر'));
- assert.equal(suitable('نفرت و مرگ در عشق تو دلبر من است'),false);
+test('Ganjoor publication requires a semantically reviewed exact couplet, not the word love',async()=>{
+ const {readFileSync}=await import('node:fs');const reviewed=JSON.parse(readFileSync(new URL('../data/ganjoor-reviewed.json',import.meta.url),'utf8'))[0];
+ const uri=new URL(reviewed.source_url),index=Number(uri.hash.slice(3))-1;
+ const poem={Title:'تست',FullUrl:uri.pathname,Verses:reviewed.text.split('\n').map((text,i)=>({VOrder:i+1,CoupletIndex:index,Position:i?'Left':'Right',Text:text})),PoemSummary:'شرح معاصر'};
+ assert.equal(ganjoorExcerpts(poem,reviewed.author).length,1);
+ poem.Verses[0].Text='این سخن درباره عشق عرفانی و فلسفه است';assert.equal(ganjoorExcerpts(poem,reviewed.author).length,0);
 });
 test('nightly scheduling uses Tehran date and retries outages without claiming success',async()=>{
  assert.equal(tehranSlot(new Date('2026-11-01T22:29:00Z')).due,false);

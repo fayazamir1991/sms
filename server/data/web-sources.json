@@ -48,18 +48,6 @@
     ]
   },
   {
-    "id": "namnak",
-    "enabled": true,
-    "format": "html",
-    "url": "https://namnak.com/t30-اس-ام-اس-عاشقانه",
-    "pathPrefix": "/",
-    "language": "fa",
-    "label": "نمناک",
-    "rights": "Site administrator explicitly authorized reuse in project conversation on 2026-11-01",
-    "mode": "content",
-    "author": "نمناک"
-  },
-  {
     "id": "taw-bio",
     "enabled": true,
     "format": "html",

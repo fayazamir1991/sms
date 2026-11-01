@@ -234,10 +234,29 @@ public final class AppStore {
             finally { db.endTransaction(); }
         }
     }
+    public void rememberCatalog(JSONArray rows) throws JSONException {
+        synchronized(LOCK){db.beginTransaction();try{
+            for(int i=0;i<rows.length();i++){
+                JSONObject row=rows.getJSONObject(i);ContentValues v=new ContentValues();v.put("id",row.getString("id"));v.put("body",row.getString("body"));v.put("category",row.getString("category"));db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+                app.getSharedPreferences("catalog_metadata",0).edit().putString(row.getString("body"),row.toString()).apply();
+            }db.setTransactionSuccessful();
+        }finally{db.endTransaction();}}
+    }
+    public List<String> localCatalogPage(String category,String query,int offset){
+        synchronized(LOCK){List<String> out=new ArrayList<>();List<String> args=new ArrayList<>();
+            String where="body LIKE ? ESCAPE char(92)";args.add("%"+query.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")+"%");
+            if(!"همه".equals(category)){where+=" AND category=?";args.add(category);}
+            try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache WHERE "+where+" ORDER BY id LIMIT 21 OFFSET "+Math.max(0,offset),args.toArray(new String[0]))){while(c.moveToNext())out.add(c.getString(0));}return out;
+        }
+    }
     public String catalogCredit(String text) {
         try {
             JSONObject row=new JSONObject(app.getSharedPreferences("catalog_metadata",0).getString(text,"{}"));
-            return "منبع: "+row.optString("source","بانک دل‌نوشته")+" · "+row.optString("author","")+"\n"+row.optString("source_url","")+"\n"+row.optString("rights","");
+            String source=row.isNull("source")?"بانک دل‌نوشته":row.optString("source","بانک دل‌نوشته");
+            String author=row.isNull("author")?"":row.optString("author","");
+            String url=row.isNull("source_url")?"":row.optString("source_url","");
+            String rights=row.isNull("rights")?"":row.optString("rights","");
+            return "منبع: "+source+(author.isEmpty()?"":"\nپدیدآورنده: "+author)+(url.isEmpty()?"":"\n"+url)+(rights.isEmpty()?"":"\n"+rights);
         }catch(Exception error){return "بانک دل‌نوشته";}
     }
     public List<String> cachedSuggestions(String category,String nickname) {

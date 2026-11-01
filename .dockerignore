@@ -1,0 +1,14 @@
+*
+!server/
+!server/package.json
+!server/src/
+!server/src/**
+!server/public/
+!server/public/**
+!server/scripts/
+!server/scripts/build-seed.mjs
+!server/data/
+!server/data/**
+!server/migrations/
+!server/migrations/0001_schema.sql
+# Everything else, including signing material, Android files and .env, is excluded.

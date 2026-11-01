@@ -17,6 +17,7 @@ jobs:
       contents: write
       actions: read
     env:
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
     steps:

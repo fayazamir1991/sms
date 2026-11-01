@@ -12,10 +12,14 @@ Install JDK 17 or 21, Gradle 8.9, Android SDK platform 35 and build-tools 35.0.0
 
 The app has no external runtime libraries. Set JAVA_HOME to JDK 17 or 21 and ANDROID_HOME to the SDK. Run `python3 build-direct.py`. Output: `build/direct/delneveshte-0.3.0.apk`. This uses aapt2, javac, D8, zipalign and apksigner. It refuses to create a replacement signing key. Supply ANDROID_SIGNING_STORE and ANDROID_SIGNING_PASSWORD for the privately preserved key, or retain the original local build/direct/debug.keystore. The certificate must match signing-certificate.sha256.
 
-For distribution, first deploy the backend as documented in CLOUDFLARE.md. Its workflow commits the verified API endpoint. GitHub Actions restores the original key from Secrets, builds release, verifies the certificate, and publishes v0.3.0 only if it does not already exist. Debug APKs are for development and must not be distributed as compatible updates.
+For distribution, first deploy the Docker backend as documented in HAMRAVESH.md and set the API_BASE_URL GitHub repository variable to its HTTPS origin. The optional Cloudflare workflow can instead commit the endpoint. GitHub Actions restores the original key from Secrets, builds release, verifies the certificate, and publishes v0.3.0 only if it does not already exist. Debug APKs are for development and must not be distributed as compatible updates.
 
 ## Server checks
 
 Node 24 or newer: `cd server && npm test && npm run seed:build`. Tests use an in-memory SQLite D1 adapter and include authorization, encrypted private logs, idempotent synchronization, catalog deduplication and replay-safe first-deploy seeding. No Cloudflare account is needed for these tests. The deployment workflow installs Wrangler only after tests pass.
 
 Robolectric covers existing SMS approval actions plus database migration and cloud acknowledgement races without real network or SMS. On-device battery/background behavior still needs handset validation.
+
+## Docker checks
+
+Run `docker build -t delneveshte-test .` from the repository root, then `python3 server/scripts/docker-smoke.py delneveshte-test`. This runs and replaces real containers, verifies HTTP API/admin authorization behind an HTTPS public origin, and confirms persistence on a named volume. It creates ephemeral test credentials and removes its own containers and volume on completion.

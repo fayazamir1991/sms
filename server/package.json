@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "pretest": "node scripts/build-seed.mjs",
     "test": "node --test --test-isolation=none test/*.test.mjs",
+    "prestart": "node scripts/build-seed.mjs",
+    "start": "node src/runtime.mjs",
     "seed:build": "node scripts/build-seed.mjs",
     "config": "node scripts/configure-cloudflare.mjs"
   },

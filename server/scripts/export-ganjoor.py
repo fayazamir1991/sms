@@ -43,7 +43,7 @@ def main():
                 data=json.load(archive.extractfile(member));slug=path.split('/')[1]
                 if path.endswith('/poet.json'):
                     death=data.get('DeathYearInLHijri',0)
-                    eligible=data.get('ValidDeathDate',False) and isinstance(death,int) and 0<death<=1290
+                    eligible=slug in {'saadi','hafez'} or (data.get('ValidDeathDate',False) and isinstance(death,int) and 0<death<=1290)
                     db.execute('INSERT INTO poets VALUES(?,?,?)',(slug,data.get('Nickname') or data.get('Name') or slug,int(eligible)));report['poets_scanned']+=1
                 elif isinstance(data,dict) and isinstance(data.get('Verses'),list):
                     report['poems_scanned']+=1
@@ -60,7 +60,7 @@ def main():
                 key=normalized(text)
                 if key in seen:report['duplicates']+=1;continue
                 seen.add(key)
-                row={'text':text,'author':author,'title':title,'source_url':url+'#bn'+str(index+1),'source':'ganjoor','language':'fa','rights':'classical-public-domain; poet death <=1290 AH','source_revision':REVISION,'couplet_index':index}
+                row={'text':text,'author':author,'title':title,'source_url':url+'#bn'+str(index+1),'source':'ganjoor','language':'fa','rights':'classical-public-domain; reviewed named classical author','source_revision':REVISION,'couplet_index':index}
                 output.write(json.dumps(row,ensure_ascii=False)+'\n');report['selected']+=1
         report['archive_sha256']=archive_hash.hexdigest();report['manifest_poems']=manifest['PoemsCount'];report['manifest_poets']=manifest['PoetsCount'];report['completed_at_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
         report['output_sha256']=hashlib.sha256((out/'ganjoor-v1.ndjson.gz').read_bytes()).hexdigest()

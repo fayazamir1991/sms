@@ -54,15 +54,19 @@ const stats=await (await fetch(base+'/api/admin/stats',{headers})).json();
 assert.ok(stats.catalog>=1002);
 const {readFileSync}=await import('node:fs');
 const corpus=JSON.parse(readFileSync('./data/imports/ganjoor-report.json','utf8'));
+const {gunzipSync}=await import('node:zlib');
+const {contentKey}=await import('./src/catalog-import.mjs');
+const excerpts=gunzipSync(readFileSync('./data/imports/ganjoor-v1.ndjson.gz')).toString('utf8').trim().split('\n').map(line=>JSON.parse(line));
+const canonicalCount=new Set(excerpts.map(row=>contentKey(row.text))).size;
 const bank=await (await fetch(base+'/api/admin/reports?table=catalog&days=7',{headers})).json();
 assert.equal(bank.timeline.points.length,7);assert.equal(bank.groups.length,8);
-assert.equal(bank.groups.find(g=>g.id==='source').rows.find(r=>r.key==='ganjoor').value,corpus.selected,'Every selected bundled couplet must reach the real database');
+assert.equal(bank.groups.find(g=>g.id==='source').rows.find(r=>r.key==='ganjoor').value,canonicalCount,'Every canonically unique selected couplet must reach the real database');
 assert.equal(bank.groups.find(g=>g.id==='category').rows.reduce((n,r)=>n+r.value,0),stats.catalog);
 assert.equal((await fetch(base+'/api/admin/reports?table=catalog')).status,401);
 for(const table of ['installations','queue','sent','events','imports','webpages']){
  const response=await fetch(base+'/api/admin/reports?table='+table+'&days=30',{headers});assert.equal(response.status,200);assert.equal((await response.json()).timeline.points.length,30);
 }
-console.log('Verified selected Ganjoor poems in SQLite: '+corpus.selected);
+console.log('Verified selected Ganjoor poems in SQLite: '+canonicalCount+' (raw selections: '+corpus.selected+')');
 assert.equal((await fetch(base+'/admin')).status,200);
 const font=await fetch(base+'/fonts/Vazirmatn.woff2');assert.equal(font.status,200);assert.equal(font.headers.get('content-type'),'font/woff2');assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0,4).toString(),'wOF2');
 assert.match(await (await fetch(base+'/admin.js')).text(),/use strict/);

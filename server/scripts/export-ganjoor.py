@@ -15,7 +15,8 @@ def classify(text,context=''):
     score=sum(RULES['signals'][key]['weight'] for key in signals)
     personal='address' in signals and any(s in signals for s in ['speaker','relationship','imagery'])
     emotional=any(s in signals for s in ['longing','together']) or ('joy' in signals and any(s in signals for s in ['affection','relationship']))
-    return {'score':score,'signals':signals} if personal and emotional and score>=RULES['minimum_score'] else None
+    relational=any(s in signals for s in ['affection','relationship','longing']) or bool(re.search(RULES['intimacy'],t))
+    return {'score':score,'signals':signals} if personal and emotional and relational and score>=RULES['minimum_score'] else None
 def excerpts(poem):
     groups=collections.defaultdict(list)
     for verse in sorted(poem.get('Verses',[]),key=lambda v:v.get('VOrder',0)):

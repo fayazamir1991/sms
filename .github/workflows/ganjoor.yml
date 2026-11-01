@@ -2,7 +2,7 @@ name: One-time complete Ganjoor corpus import
 on:
   push:
     branches: [main]
-    paths: ['server/scripts/export-ganjoor.py', 'server/data/ganjoor-reviewed.json', '.github/workflows/ganjoor.yml']
+    paths: ['server/scripts/export-ganjoor.py', 'server/data/ganjoor-reviewed.json', 'server/data/ganjoor-balanced-rules.json', '.github/workflows/ganjoor.yml']
   workflow_dispatch:
 permissions:
   contents: write

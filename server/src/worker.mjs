@@ -49,6 +49,7 @@ async function suggestions(request,env){
  const {results}=await env.DB.prepare(base+(category==='همه'?'':' AND c.category=?')+' ORDER BY (h.served_at IS NULL) DESC,(c.created_at>?) DESC,h.served_at ASC,RANDOM() LIMIT ?').bind(...args).all();
  const now=Date.now();
  for(let i=0;i<results.length;i+=20){const chunk=results.slice(i,i+20);if(chunk.length)await env.DB.prepare('INSERT INTO catalog_offers(installation_id,catalog_id,served_at) VALUES '+chunk.map(()=>'(?,?,?)').join(',')+' ON CONFLICT(installation_id,catalog_id) DO UPDATE SET served_at=excluded.served_at').bind(...chunk.flatMap(row=>[installation.id,row.id,now])).run();}
+ await env.DB.prepare('DELETE FROM catalog_offers WHERE installation_id=? AND catalog_id NOT IN (SELECT catalog_id FROM catalog_offers WHERE installation_id=? ORDER BY served_at DESC LIMIT 1000)').bind(installation.id,installation.id).run();
  return json({messages:results,source:'server',fetched_at:now});
 }
 

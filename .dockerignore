@@ -12,3 +12,5 @@
 !server/migrations/
 !server/migrations/0001_schema.sql
 # Everything else, including signing material, Android files and .env, is excluded.
+
+!server/scripts/fetch-font.mjs

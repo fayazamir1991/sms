@@ -22,7 +22,7 @@ export function settings(input=process.env){
  return {...config,publicUrl:url.origin,port,host:input.HOST||'0.0.0.0',database:resolve(input.DATA_DIR||'/data','delneveshte.sqlite')};
 }
 function assets(){
- const paths=new Map([['/index.html',['index.html','text/html; charset=utf-8']],['/admin.js',['admin.js','text/javascript; charset=utf-8']],['/admin.css',['admin.css','text/css; charset=utf-8']]]);
+ const paths=new Map([['/fonts/Vazirmatn.woff2',['fonts/Vazirmatn.woff2','font/woff2']],['/fonts/OFL.txt',['fonts/OFL.txt','text/plain; charset=utf-8']],['/index.html',['index.html','text/html; charset=utf-8']],['/admin.js',['admin.js','text/javascript; charset=utf-8']],['/admin.css',['admin.css','text/css; charset=utf-8']]]);
  return {async fetch(request){
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});
   const entry=paths.get(new URL(request.url).pathname);if(!entry)return new Response('Not found',{status:404});

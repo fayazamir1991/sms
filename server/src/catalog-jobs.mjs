@@ -1,3 +1,5 @@
+import {collectSocial} from './social-collector.mjs';
+import {collectWeb} from './web-collector.mjs';
 import {randomInt} from 'node:crypto';
 import {ganjoorExcerpts,importBundledGanjoor,insertExcerpts,suitable} from './catalog-import.mjs';
 const sources=[{path:'/hafez/ghazal',author:'حافظ'},{path:'/saadi/divan/ghazals',author:'سعدی'},{path:'/moulavi/shams/ghazalsh',author:'مولانا'}];
@@ -11,7 +13,7 @@ export async function fetchJson(url,fetcher=fetch){
 export function tehranSlot(now=new Date()){
  const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));return {day:p.year+'-'+p.month+'-'+p.day,due:Number(p.hour)>=2};
 }
-export async function collectNightly(fetcher=fetch){
+export async function collectNightly(fetcher=fetch,db=null){
  const rows=[],failures=[];let successes=0;
  for(const source of sources)try{
   const base='https://cdn.jsdelivr.net/gh/ganjoor/ganjoor-data@main/poets',cat=await fetchJson(base+source.path+'/_cat.json',fetcher);if(!Array.isArray(cat.Poems))throw new Error('Invalid Ganjoor category');const poems=[...cat.Poems];
@@ -20,15 +22,16 @@ export async function collectNightly(fetcher=fetch){
  try{
   const poems=await fetchJson('https://poetrydb.org/title,random/love;5',fetcher);if(!Array.isArray(poems))throw new Error('Invalid PoetryDB response');
   for(const p of poems)if(englishAuthors.has(p.author)&&Array.isArray(p.lines))for(let i=0;i<p.lines.length-1;i+=2){const text=p.lines.slice(i,i+2).join('\n');if(suitable(text,'en'))rows.push({text,author:p.author,title:p.title,source:'poetrydb',source_url:'https://poetrydb.org/title/'+encodeURIComponent(p.title)+':abs',language:'en',rights:'PoetryDB CC BY 4.0; public-domain poem text',source_revision:'live'});}successes++;
- }catch{failures.push('poetrydb');}return {rows,failures,successes};
+ }catch{failures.push('poetrydb');}
+ const web=await collectWeb(fetcher,undefined,db);rows.unshift(...web.rows);failures.push(...web.failures);successes+=web.successes;const social=await collectSocial(process.env,fetcher);rows.unshift(...social.rows);failures.push(...social.failures);successes+=social.successes;return {rows,failures,successes,social_status:social.status};
 }
 export async function runNightly(db,{now=new Date(),limit=20,fetcher=fetch}={}){
  const slot=tehranSlot(now);if(!slot.due)return {skipped:true};
  const old=await db.prepare('SELECT * FROM catalog_jobs WHERE job=? AND run_key=?').bind('nightly',slot.day).first();if(old?.status==='complete'||old&&Date.now()-old.started_at<30*60*1000)return {skipped:true};
  await db.prepare("INSERT INTO catalog_jobs(job,run_key,status,started_at) VALUES('nightly',?,'running',?) ON CONFLICT(job,run_key) DO UPDATE SET status='running',started_at=excluded.started_at").bind(slot.day,Date.now()).run();
  try{
-  const collected=await collectNightly(fetcher),added=await insertExcerpts(db,collected.rows,Math.max(0,limit-(old?.added||0)));
-  await db.prepare('UPDATE catalog_jobs SET status=?,finished_at=?,added=added+?,detail=? WHERE job=? AND run_key=?').bind(collected.failures.length?'partial':'complete',Date.now(),added,JSON.stringify({sources_ok:collected.successes,failed_sources:collected.failures}),'nightly',slot.day).run();return {added,partial:collected.failures.length>0};
+  const collected=await collectNightly(fetcher,db),added=await insertExcerpts(db,collected.rows,Math.max(0,limit-(old?.added||0)));
+  await db.prepare('UPDATE catalog_jobs SET status=?,finished_at=?,added=added+?,detail=? WHERE job=? AND run_key=?').bind(collected.failures.length?'partial':'complete',Date.now(),added,JSON.stringify({sources_ok:collected.successes,failed_sources:collected.failures,social_status:collected.social_status}),'nightly',slot.day).run();return {added,partial:collected.failures.length>0};
  }catch(error){await db.prepare("UPDATE catalog_jobs SET status='failed',finished_at=?,detail='Import failed; will retry' WHERE job='nightly' AND run_key=?").bind(Date.now(),slot.day).run();throw error;}
 }
 export function startCatalogJobs(db,input=process.env){

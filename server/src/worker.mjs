@@ -141,6 +141,7 @@ async function adminApi(request,env,path){
   const table=path.split('/').pop(),url=new URL(request.url),page=Number(url.searchParams.get('page')||1);
   requireValue(number(page,1,100000));
   const queries={
+   webpages:'SELECT source,url,fetched_at,done FROM catalog_web_pages ORDER BY fetched_at,url',
    imports:'SELECT job,run_key,status,started_at,finished_at,added,detail FROM catalog_jobs ORDER BY started_at DESC',
    catalog:'SELECT c.id,c.body,c.category,c.active,c.created_at,o.source,o.source_url,o.author,o.language,o.rights FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id ORDER BY c.created_at DESC,c.id',
    installations:'SELECT id,device_hash,app_version,enabled,created_at,last_seen_at FROM installations ORDER BY created_at DESC,id',

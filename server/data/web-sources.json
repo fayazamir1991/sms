@@ -1,0 +1,72 @@
+[
+  {
+    "id": "quotable",
+    "enabled": true,
+    "format": "quotable",
+    "url": "https://raw.githubusercontent.com/quotable-io/data/master/data/quotes.json",
+    "sourceUrl": "https://github.com/quotable-io/data",
+    "language": "en",
+    "label": "Quotable",
+    "rights": "Classical-author quotes; attributed Quotable dataset",
+    "authors": [
+      "William Shakespeare",
+      "Jane Austen",
+      "Victor Hugo",
+      "Oscar Wilde",
+      "Leo Tolstoy",
+      "Johann Wolfgang von Goethe",
+      "Ralph Waldo Emerson",
+      "Henry David Thoreau",
+      "Plato",
+      "Aristotle",
+      "Seneca",
+      "Epictetus",
+      "George Eliot",
+      "Charles Dickens",
+      "Percy Bysshe Shelley",
+      "John Keats"
+    ]
+  },
+  {
+    "id": "wikiquote-fa",
+    "enabled": true,
+    "format": "html",
+    "url": "https://fa.wikiquote.org/wiki/عشق",
+    "language": "fa",
+    "label": "ویکی‌گفتاورد؛ مشارکت‌کنندگان",
+    "rights": "CC BY-SA 4.0; classical-author excerpts only",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "authors": [
+      "سعدی",
+      "حافظ",
+      "مولوی",
+      "مولانا",
+      "افلاطون",
+      "ارسطو",
+      "ویکتور هوگو",
+      "شکسپیر"
+    ]
+  },
+  {
+    "id": "namnak",
+    "enabled": true,
+    "format": "html",
+    "url": "https://namnak.com/t30-اس-ام-اس-عاشقانه",
+    "pathPrefix": "/",
+    "language": "fa",
+    "label": "نمناک",
+    "rights": "Reuse permission not verified; discovery only",
+    "mode": "discovery"
+  },
+  {
+    "id": "taw-bio",
+    "enabled": true,
+    "format": "html",
+    "url": "https://taw-bio.ir/category/love",
+    "pathPrefix": "/",
+    "language": "fa",
+    "label": "تاوبیو",
+    "rights": "Publisher permission required by site terms; discovery only",
+    "mode": "discovery"
+  }
+]

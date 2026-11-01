@@ -37,7 +37,7 @@ test('nightly scheduling uses Tehran date and retries outages without claiming s
 });
 test('nightly success persists and prevents a second run for the same day',async()=>{
  const db=new TestD1();try{
- const fetcher=async url=>new Response(JSON.stringify(url.includes('poetrydb.org')?[]:{Poems:[]}),{headers:{'Content-Type':'application/json'}});
+ const fetcher=async url=>new Response(url.endsWith('/robots.txt')?'User-agent: *':url.includes('quotes.json')?'[]':url.includes('wikiquote.org')?'<html></html>':JSON.stringify(url.includes('poetrydb.org')?[]:{Poems:[]}),{headers:{'Content-Type':'application/json'}});
  assert.equal((await runNightly(db,{now:new Date('2026-11-01T22:31:00Z'),fetcher})).partial,false);
  assert.equal((await runNightly(db,{now:new Date('2026-11-01T22:31:00Z'),fetcher})).skipped,true);
  }finally{db.close();}

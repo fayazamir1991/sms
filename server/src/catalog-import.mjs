@@ -2,13 +2,15 @@ import {createHash,randomUUID} from 'node:crypto';
 import {existsSync,readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
 import {normalizeBody} from './crypto.mjs';
+const configuredSources=JSON.parse(readFileSync(new URL('../data/web-sources.json',import.meta.url),'utf8'));
+const sourceOrigins=new Map(configuredSources.filter(s=>s.enabled&&s.mode!=='discovery').map(s=>[s.id,new URL(s.sourceUrl||s.url).origin]));
 const sha=value=>createHash('sha256').update(value).digest('hex');
 export const contentKey=text=>sha(normalizeBody(text.normalize('NFKD').replace(/\p{M}/gu,'').replace(/\u200c/g,' ')).toLowerCase());
 export function suitable(text,language='fa'){
  const t=text.normalize('NFKD').replace(/\p{M}/gu,'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/\u200c/g,' ');
  if(t.length<25||t.length>650)return false;
  if(language==='en')return /\b(love|beloved|darling|sweetheart|kiss|embrace)\b/i.test(t)&&/\b(you|thee|thou|thy|your|our|my)\b/i.test(t)&&!/\b(death|kill|hate|rape|corpse|suicide)\b/i.test(t);
- return !/دشمن|نفرت|کشتن|خون|مرگ|جنازه|لعنت|جهنم|زنا|کافر|تجاوز|بمیر|ستمگر/.test(t)&&((/عشق|عاشق|معشوق|جانان|دلبر|دلبند|دلدار|دلداده|محبوب|دلارام/.test(t)&&/تو|ترا|لبت|لبان|زلف|آغوش|وصال|دیدار|بوسه|چشم|نگاه|یار|مهر|دلم|دل من/.test(t))||/دوستت دارم|دوست می دارم|در آغوش|بوسه.*لب|لب.*بوسه/.test(t));
+ return !/دشمن|نفرت|کشتن|خون|مرگ|جنازه|لعنت|جهنم|زنا|کافر|تجاوز|بمیر|ستمگر/.test(t)&&((/عشق|عاشق|معشوق|جانان|دلبر|دلبند|دلدار|دلداده|محبوب|دلارام/.test(t)&&/تو|ترا|لبت|لبان|زلف|آغوش|وصال|دیدار|بوسه|چشم|نگاه|یار|مهر|دلم|دل من/.test(t))||/دوستت دارم|دوست می دارم|در آغوش|بوسه.*لب|لب.*بوسه|عزیزم|همسرم|عاشقتم|لبخند تو|کنار تو/.test(t));
 }
 export function ganjoorExcerpts(poem,author,revision='nightly'){
  const groups=new Map();for(const v of [...(poem.Verses||[])].sort((a,b)=>a.VOrder-b.VOrder))if(['Right','Left'].includes(v.Position)){const pair=groups.get(v.CoupletIndex)||[];pair.push(v);groups.set(v.CoupletIndex,pair);}
@@ -26,12 +28,12 @@ export async function insertExcerpts(db,rows,limit=Infinity){
    if(added+statements.length/2>=limit)break;
    if(!row||!['fa','en'].includes(row.language)||typeof row.text!=='string'||!suitable(row.text,row.language)||!row.author||!row.rights)continue;
    let url;try{url=new URL(row.source_url);}catch{continue;}
-   if(url.protocol!=='https:'||!['ganjoor.net','poetrydb.org'].includes(url.hostname))continue;
+   if(url.protocol!=='https:'||(!['ganjoor.net','poetrydb.org'].includes(url.hostname)&&sourceOrigins.get(row.source)!==url.origin&&!(row.source==='x'&&url.hostname==='x.com')&&!(row.source==='instagram'&&url.hostname==='www.instagram.com')))continue;
    const key=contentKey(row.text);if(seen.has(key))continue;seen.add(key);
    if(await db.prepare('SELECT 1 FROM catalog_origins WHERE content_key=?').bind(key).first())continue;
-   const body=row.text+'\n— '+row.author+' 💕\n'+(row.source==='poetrydb'?'PoetryDB · CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ · ':'گنجور · ')+row.source_url;if(body.length>1200)continue;
+   const body=row.text+'\n— '+row.author+' 💕\n'+(row.source==='poetrydb'?'PoetryDB · CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ · ':row.source==='ganjoor'?'گنجور · ':(row.source_label||row.source)+' · '+(row.license_url||'')+' · ')+row.source_url;if(body.length>1200)continue;
    const id=randomUUID(),fp=sha(normalizeBody(body)),now=Date.now();
-   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(id,body,fp,'شعر',now));
+   statements.push(db.prepare('INSERT OR IGNORE INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(id,body,fp,['کوتاه','صمیمی'].includes(row.category)?row.category:'شعر',now));
    statements.push(db.prepare('INSERT OR IGNORE INTO catalog_origins(catalog_id,content_key,source,source_url,author,title,language,rights,source_revision,imported_at) SELECT id,?,?,?,?,?,?,?,?,? FROM catalog_messages WHERE fingerprint=?').bind(key,row.source,row.source_url,row.author,row.title||'',row.language,row.rights,row.source_revision||'',now,fp));
   }
   if(statements.length){const results=await db.batch(statements);for(let i=0;i<results.length;i+=2)added+=results[i].meta.changes;}

@@ -5,12 +5,8 @@ REVISION='34f4ab3e463903f9399d7ca208b9333911389f94'
 def normalized(text):
     text=unicodedata.normalize('NFKD',text).replace('ي','ی').replace('ك','ک').replace('\u200c',' ')
     return ' '.join(''.join(c for c in text if not unicodedata.combining(c)).split())
-def romantic(text):
-    text=normalized(text)
-    if re.search(r'دشمن|نفرت|کشتن|خون|مرگ|جنازه|لعنت|جهنم|زنا|کافر|تجاوز|بمیر|ستمگر',text):return False
-    strong=re.findall(r'عشق|عاشق|معشوق|جانان|دلبر|دلبند|دلدار|دلداده|محبوب|دلارام',text)
-    personal=re.search(r'تو|تویی|ترا|لبت|لبان|زلف|آغوش|وصال|دیدار|بوسه|چشم|نگاه|یار|مهر|دلم|دل من',text)
-    return bool(strong and personal) or bool(re.search(r'دوستت دارم|دوست می دارم|در آغوش|بوسه.*لب|لب.*بوسه',text))
+REVIEWED=json.loads((Path(__file__).resolve().parents[1]/'data/ganjoor-reviewed.json').read_text())
+APPROVED={r['source_url']:normalized(r['text']) for r in REVIEWED if r['decision']=='approved'}
 def excerpts(poem):
     groups=collections.defaultdict(list)
     for verse in sorted(poem.get('Verses',[]),key=lambda v:v.get('VOrder',0)):
@@ -19,14 +15,15 @@ def excerpts(poem):
     for index,rows in sorted(groups.items()):
         if len(rows)==2 and [v.get('Position') for v in rows]==['Right','Left']:
             text='\n'.join(html.unescape(re.sub('<[^>]+>','',v['Text'])).strip() for v in rows)
-            if 30<=len(text)<=420 and romantic(text):pairs.append((index,text))
+            url='https://ganjoor.net'+poem['FullUrl']+'#bn'+str(index+1)
+            if APPROVED.get(url)==normalized(text):pairs.append((index,text))
     # One complete couplet per excerpt; never join unrelated lines or different poems.
     return pairs
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--output',default='server/data/imports');parser.add_argument('--archive');args=parser.parse_args()
     out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
-    report={'revision':REVISION,'schema':4,'poems_scanned':0,'poets_scanned':0,'romantic_candidates':0,'selected':0,'rights_excluded':0,'duplicates':0,'classification':'lexical conservative heuristic, not human review','excerpt_couplets':1}
+    report={'revision':REVISION,'schema':4,'poems_scanned':0,'poets_scanned':0,'romantic_candidates':0,'selected':0,'rights_excluded':0,'duplicates':0,'classification':'contextual reading by assistant; exact approved couplet allowlist','selection_policy':'semantic-reviewed-v2','reviewed_couplets':len(REVIEWED),'excerpt_couplets':1}
     with tempfile.TemporaryDirectory() as temp:
         db=sqlite3.connect(Path(temp)/'candidates.sqlite');db.executescript('CREATE TABLE poets(slug TEXT PRIMARY KEY,name TEXT,eligible INTEGER);CREATE TABLE excerpts(slug TEXT,poem_id INTEGER,title TEXT,url TEXT,idx INTEGER,text TEXT);')
         url='https://codeload.github.com/ganjoor/ganjoor-data/tar.gz/'+REVISION

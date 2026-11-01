@@ -1,0 +1,17 @@
+{
+  "revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+  "schema": 4,
+  "poems_scanned": 138382,
+  "poets_scanned": 242,
+  "romantic_candidates": 32011,
+  "selected": 13411,
+  "rights_excluded": 18545,
+  "duplicates": 55,
+  "classification": "lexical conservative heuristic, not human review",
+  "excerpt_couplets": 1,
+  "archive_sha256": "e09a97e2809a9dde80497cab3531efa5ab017d4ad5ddfbddc9578eebe245c3f5",
+  "manifest_poems": 138382,
+  "manifest_poets": 242,
+  "completed_at_utc": "2026-11-01T14:13:07Z",
+  "output_sha256": "7661389f1d7862f3dfa2d52d6fb9d6f536b38c0a0403aed1c65ad5504a74735d"
+}

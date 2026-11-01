@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-/** Offline, explicit-approval UI. No SMS is sent on launch or after a permission grant. */
+/** Local approvals and optional cloud synchronization. No SMS is sent on launch. */
 public class MainActivity extends Activity {
     private static final int BG = Color.rgb(255, 249, 245);
     private static final int INK = Color.rgb(56, 37, 45);
@@ -111,6 +111,8 @@ public class MainActivity extends Activity {
         }
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         if (store.settings().enabled) SmsRuntime.reconcile(this);
+        CloudScheduler.ensure(this);
+        maybeOfferCloudSync();
         render();
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
@@ -248,7 +250,11 @@ public class MainActivity extends Activity {
         }
         categories.addView(chips);
         addPage(categories, 0, 14);
+        page.addView(body(store.hasCachedCatalog(category)
+                ? "پیشنهادها از بانک پیام‌ها دریافت و روی گوشی ذخیره شده‌اند."
+                : "فعلاً پیشنهادهای آمادهٔ گوشی را می‌بینی؛ بانک پیام‌ها پس از اتصال به سرور به‌روز می‌شود.", 12));
         if (options.isEmpty()) renewOptions();
+        if (options.isEmpty()) page.addView(body("در این دسته فعلاً پیامی موجود نیست؛ دستهٔ دیگری را انتخاب کن یا متن خودت را بنویس.",14));
         int number = 0;
         for (String text : options) {
             LinearLayout c = card(Color.WHITE);
@@ -288,7 +294,8 @@ public class MainActivity extends Activity {
 
     private void renewOptions() {
         String nickname = draft == null ? "عزیزم" : draft.nickname;
-        options = TextBank.suggestions(category, nickname, random);
+        options = store.hasCachedCatalog(category) ? store.cachedSuggestions(category,nickname)
+                : TextBank.suggestions(category, nickname, random);
     }
 
     private void editText(String initial) {
@@ -576,7 +583,58 @@ public class MainActivity extends Activity {
                 () -> openSystem(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))), 8, 0);
         phoneHelp.addView(body("برای آزمون اول، یک متن را تأیید کن و در صف «ارسال همین حالا» را بزن؛ سپس ثبت آن را در گفت‌وگوی همسرت در Google Messages ببین. محدودیت‌های گوشی و نصب باید روی همین دستگاه بررسی شوند.", 13));
         page.addView(phoneHelp);
-        addPage(body("دل‌نوشته · نسخهٔ اولیه\nپیشنهادها و اطلاعات این نسخه روی گوشی نگهداری می‌شوند؛ این نسخه به سرویس تولید متن آنلاین متصل نیست.", 12), 0, 0);
+        cloudSettings();
+        addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "\nصف همیشه ابتدا روی گوشی ذخیره می‌شود. همگام‌سازی به اینترنت و اجازهٔ اجرای پس‌زمینه نیاز دارد.", 12), 0, 0);
+    }
+
+    private static final String CLOUD_DISCLOSURE = "با فعال‌کردن همگام‌سازی، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";
+
+    private void maybeOfferCloudSync() {
+        CloudConfig cloud=new CloudConfig(this);
+        if(cloud.prompted()||cloud.baseUrl().isEmpty()||activeEditorDialog!=null)return;
+        cloud.setPrompted();
+        new AlertDialog.Builder(this).setTitle("همگام‌سازی با سرور")
+                .setMessage(CLOUD_DISCLOSURE)
+                .setPositiveButton("فعال‌کردن",(dialog,which)->{
+                    cloud.configure(cloud.baseUrl(),true);CloudScheduler.ensure(this);render();
+                    toast("همگام‌سازی با اتصال به اینترنت انجام می‌شود");
+                }).setNegativeButton("فعلاً نه",null).show();
+    }
+
+    private void cloudSettings() {
+        CloudConfig cloud=new CloudConfig(this);
+        LinearLayout section=card(Color.WHITE);
+        section.addView(label("بانک پیام‌ها و همگام‌سازی",17,INK,true));
+        section.addView(body(CLOUD_DISCLOSURE,13));
+        section.addView(body(cloud.enabled()?"همگام‌سازی فعال است":"همگام‌سازی غیرفعال است",14));
+        section.addView(body("پیام‌های در انتظار همگام‌سازی: "+fa(store.pendingSyncCount()),13));
+        if(cloud.lastSync()>0)section.addView(body("آخرین همگام‌سازی: "+DateFormat.getDateTimeInstance().format(new Date(cloud.lastSync())),12));
+        if(!cloud.lastError().isEmpty())section.addView(body(cloud.lastError(),13));
+        if(cloud.enabled()) {
+            section.addView(button("همگام‌سازی با اینترنت",false,()->{
+                CloudScheduler.requestSync(this);toast("با دسترسی به اینترنت، همگام‌سازی شروع می‌شود");
+            }));
+            add(section,button("خاموش‌کردن همگام‌سازی",false,()->{
+                cloud.configure(cloud.baseUrl(),false);CloudScheduler.ensure(this);render();
+                toast("همگام‌سازی متوقف شد؛ اطلاعات قبلی سرور حذف نمی‌شود");
+            }),8,0);
+        }
+        add(section,button(cloud.enabled()?"تغییر سرور":"راه‌اندازی همگام‌سازی",false,()->{
+            LinearLayout content=dialogContent();content.addView(body(CLOUD_DISCLOSURE,13));
+            EditText address=input(cloud.baseUrl(),"https://…workers.dev",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
+            address.setTextDirection(View.TEXT_DIRECTION_LTR);content.addView(address,match());
+            AlertDialog dialog=new AlertDialog.Builder(this).setTitle("اتصال به سرور")
+                    .setView(content).setPositiveButton("ذخیره و فعال‌کردن",null).setNegativeButton("انصراف",null).create();
+            dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+                try {
+                    String url=CloudConfig.normalizeUrl(address.getText().toString());
+                    boolean changed=!url.equals(cloud.baseUrl());cloud.configure(url,true);
+                    if(changed){store.clearCatalog();cloud.catalogUpdatedReset();}
+                    CloudScheduler.ensure(this);renewOptions();dialog.dismiss();render();
+                }catch(IllegalArgumentException error){address.setError(error.getMessage());}
+            }));dialog.show();
+        }),8,0);
+        page.addView(section);
     }
 
     private Button timeButton(boolean start) {

@@ -21,6 +21,7 @@ public final class RescheduleReceiver extends BroadcastReceiver {
                     new AppStore(app).requeueFuture();
                 }
                 SmsRuntime.reconcile(app);
+                CloudScheduler.ensure(app);
             } finally { pending.finish(); }
         }, "delneveshte-restore").start();
     }

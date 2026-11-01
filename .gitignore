@@ -10,3 +10,12 @@ local.properties
 .DS_Store
 __pycache__/
 *.pyc
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+server/node_modules/
+server/.wrangler/
+server/.local/
+server/migrations/0002_initial_catalog.sql

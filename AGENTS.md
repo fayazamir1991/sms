@@ -14,8 +14,8 @@ Preserve these requirements:
 - Do not send real SMS from development tools. Handset testing requires the user's explicit confirmation in the app.
 - Never commit local credentials, signing keystores, personal recipient settings or build caches.
 
-Current proposals come from an offline text bank. Do not claim unlimited AI generation or actual handset/Google Messages verification without evidence.
+Proposals come from a Cloudflare Workers + D1 catalog, cached locally; retain the offline fallback. Queue changes and durable sync events must be atomic. Server acknowledgements must never discard newer local revisions. Preserve the nondestructive DB v1→v2 migration. Cloud synchronization requires user disclosure and opt-in. Never enable a paid hosting plan. Do not claim unlimited AI generation or actual handset/Google Messages verification without evidence.
 
-The user requires each version to have a GitHub Release with an APK asset. Increment versionCode/versionName in app/build.gradle, add Persian notes under docs/releases/vVERSION.md, and let the successful main-branch workflow publish the version. Existing release tags/assets must not be silently overwritten. Current releases are experimental and use development signing keys.
+The user requires each version to have a GitHub Release with an APK asset. Increment versionCode/versionName in app/build.gradle, add Persian notes under docs/releases/vVERSION.md, and let the successful main-branch workflow publish the version. Existing release tags/assets must not be silently overwritten. Releases remain experimental. Preserve the original chat-installed signing identity pinned in signing-certificate.sha256. Never generate a replacement signing key; refuse release publication on a mismatch. Never overwrite existing release assets.
 
 Build with JDK 17/21, Android SDK platform 35 and build-tools 35.0.0, Gradle 8.9 and Android Gradle Plugin 8.7.3. See docs/BUILD.md. Run the relevant compile, lint and CoreChecks validation when changing behavior. No unnecessary Android dependencies.

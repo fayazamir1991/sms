@@ -3,7 +3,7 @@ set -euo pipefail
 
 app_version="$(python3 scripts/version.py)"
 release_tag="v${app_version}"
-apk_path="app/build/outputs/apk/debug/app-debug.apk"
+apk_path="app/build/outputs/apk/release/app-release.apk"
 named_apk="${RUNNER_TEMP}/delneveshte-${app_version}.apk"
 
 # This step runs only after build, lint and regression tests have passed on main.

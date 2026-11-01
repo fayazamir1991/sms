@@ -1,0 +1,11 @@
+{
+  "name": "delneveshte-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-isolation=none test/*.test.mjs",
+    "seed:build": "node scripts/build-seed.mjs",
+    "config": "node scripts/configure-cloudflare.mjs"
+  },
+  "devDependencies": {"wrangler": "^4.0.0"}
+}

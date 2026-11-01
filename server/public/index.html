@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="robots" content="noindex,nofollow"><title>دل‌نوشته | مدیریت</title>
+ <link rel="stylesheet" href="/admin.css"><script src="/admin.js" defer></script>
+</head>
+<body>
+ <main id="login" class="login-shell">
+  <form id="login-form" class="login-card">
+   <div class="brand-mark" aria-hidden="true">♡</div><p class="eyebrow">مدیریت دل‌نوشته</p>
+   <h1>به خانهٔ پیام‌ها خوش آمدی</h1><p class="muted">بانک پیشنهادها، نصب‌ها و گزارش ارسال را اینجا ببین.</p>
+   <label for="password">رمز مدیریت</label><input id="password" type="password" autocomplete="current-password" required>
+   <button class="primary" type="submit">ورود به پنل</button>
+   <p id="login-error" role="alert" class="error"></p>
+   <small class="muted">این پنل اطلاعات خصوصی پیام‌ها و شمارهٔ مخاطبان را نمایش می‌دهد.</small>
+  </form>
+ </main>
+ <div id="dashboard" hidden>
+  <aside class="sidebar"><div class="brand"><span aria-hidden="true">♡</span><div><strong>دل‌نوشته</strong><small>پنل مدیریت محصول</small></div></div>
+   <nav aria-label="جدول‌ها">
+    <button data-table="catalog" class="selected">بانک پیام‌ها</button><button data-table="installations">نصب‌ها</button>
+    <button data-table="queue">صف و وضعیت پیام‌ها</button><button data-table="events">روند پیام‌ها</button><button data-table="sent">گزارش ارسال</button>
+   </nav><button id="logout" class="quiet">خروج از پنل</button>
+  </aside>
+  <main class="workspace">
+   <header><div><p class="eyebrow">دید کلی محصول</p><h1>حرف‌های کوچک، پیوندهای نزدیک</h1></div><span class="connection" id="connection">متصل</span></header>
+   <section class="metrics" aria-label="آمار محصول">
+    <article><span>نصب‌های ثبت‌شده</span><strong id="count-installations">—</strong><small>هر نصب یک شناسهٔ مستقل دارد</small></article>
+    <article><span>دستگاه‌های شناسایی‌شده</span><strong id="count-devices">—</strong><small>بر اساس شناسهٔ مخصوص اپ</small></article>
+    <article><span>متن‌های فعال</span><strong id="count-catalog">—</strong><small>برای پیشنهاد به کاربران</small></article>
+    <article><span>پیام‌های در صف</span><strong id="count-queue">—</strong><small>آخرین وضعیت همگام‌شده</small></article>
+    <article><span>ارسال‌های گزارش‌شده</span><strong id="count-sent">—</strong><small>تأیید ارسال به شبکه از گوشی</small></article>
+   </section>
+   <section class="records">
+    <div class="table-heading"><div><h2 id="table-title">بانک پیام‌ها</h2><p id="table-subtitle" class="muted">متن‌های پیشنهادی را ببین و ویرایش کن.</p></div>
+     <div class="actions"><button id="refresh" class="secondary">↻ تازه‌سازی</button><button id="new-message" class="primary">＋ پیام جدید</button></div></div>
+    <p id="notice" role="status"></p>
+    <div class="table-wrap"><table><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div>
+    <footer><span id="page-label">صفحهٔ ۱</span><div class="actions"><button id="previous" class="secondary">صفحهٔ قبل</button><button id="next" class="secondary">صفحهٔ بعد</button></div></footer>
+   </section>
+   <p class="footnote">«ارسال‌شده» گزارش گوشی از ارسال به شبکه است؛ تحویل به مخاطب یا خواندن پیام را تأیید نمی‌کند. اطلاعات ممکن است با تأخیر اینترنت گوشی به‌روز شوند.</p>
+  </main>
+ </div>
+ <dialog id="editor"><form id="editor-form"><div class="dialog-heading"><h2 id="editor-title">پیام جدید</h2><button id="close-editor" class="quiet" type="button" aria-label="بستن">×</button></div>
+  <input id="message-id" type="hidden"><label for="message-body">متن پیام</label><textarea id="message-body" rows="6" maxlength="2400" required></textarea>
+  <label for="message-category">دسته‌بندی</label><select id="message-category"><option>کوتاه</option><option>صمیمی</option><option>قدردانی</option><option>دلتنگی</option><option>شعر</option></select>
+  <label class="checkbox"><input id="message-active" type="checkbox" checked>در پیشنهادها نمایش داده شود</label>
+  <p id="editor-error" class="error" role="alert"></p><button class="primary" type="submit">ذخیرهٔ پیام</button>
+ </form></dialog>
+</body></html>

@@ -1,6 +1,6 @@
 # Build and verification
 
-Version 0.2.0 was built successfully using both Gradle 8.9 / Android Gradle Plugin 8.7.3 and a direct build with official Android SDK tools. Compile SDK 35, target 34, minimum 26. Gradle assembleDebug and lintDebug passed (remaining nonfatal warnings cover target version, required telephony and intentional Persian text alignment). APK signing v2/v3 and zip alignment verification passed. CoreChecks passed 3000 random schedule scenarios, 600 candidate batches and settings validation.
+The previous version 0.2.0 was built successfully using both Gradle 8.9 / Android Gradle Plugin 8.7.3 and a direct build with official Android SDK tools. Compile SDK 35, target 34, minimum 26. Gradle assembleDebug and lintDebug passed (remaining nonfatal warnings cover target version, required telephony and intentional Persian text alignment). APK signing v2/v3 and zip alignment verification passed. CoreChecks passed 3000 random schedule scenarios, 600 candidate batches and settings validation.
 
 No real SMS has been sent. No physical handset, emulator, Android instrumentation or Google Messages display test was performed here. JVM regression tests use Robolectric to exercise the message actions and SQLite queue without sending real SMS. Complete the Persian installation guide acceptance steps before unattended use.
 
@@ -10,4 +10,12 @@ Install JDK 17 or 21, Gradle 8.9, Android SDK platform 35 and build-tools 35.0.0
 
 ## Direct build without dependency downloads
 
-The app has no external libraries. Set JAVA_HOME to JDK 17 or 21 and ANDROID_HOME to the SDK. Run `python3 build-direct.py`. Output: `build/direct/delneveshte-0.2.0.apk`. This uses aapt2, javac, D8, zipalign and apksigner. A local development signing key is created in build/direct; retain it privately if you need to install future updates without uninstalling. It is not included in the source archive. Gradle and the direct script use different development keys by default; choose the same build path for updates.
+The app has no external runtime libraries. Set JAVA_HOME to JDK 17 or 21 and ANDROID_HOME to the SDK. Run `python3 build-direct.py`. Output: `build/direct/delneveshte-0.3.0.apk`. This uses aapt2, javac, D8, zipalign and apksigner. It refuses to create a replacement signing key. Supply ANDROID_SIGNING_STORE and ANDROID_SIGNING_PASSWORD for the privately preserved key, or retain the original local build/direct/debug.keystore. The certificate must match signing-certificate.sha256.
+
+For distribution, first deploy the backend as documented in CLOUDFLARE.md. Its workflow commits the verified API endpoint. GitHub Actions restores the original key from Secrets, builds release, verifies the certificate, and publishes v0.3.0 only if it does not already exist. Debug APKs are for development and must not be distributed as compatible updates.
+
+## Server checks
+
+Node 24 or newer: `cd server && npm test && npm run seed:build`. Tests use an in-memory SQLite D1 adapter and include authorization, encrypted private logs, idempotent synchronization, catalog deduplication and replay-safe first-deploy seeding. No Cloudflare account is needed for these tests. The deployment workflow installs Wrangler only after tests pass.
+
+Robolectric covers existing SMS approval actions plus database migration and cloud acknowledgement races without real network or SMS. On-device battery/background behavior still needs handset validation.

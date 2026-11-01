@@ -3,7 +3,23 @@ android {
  namespace 'ir.delneveshte.app'
  compileSdk 35
  buildToolsVersion '35.0.0'
- defaultConfig { applicationId 'ir.delneveshte.app'; minSdk 26; targetSdk 34; versionCode 2; versionName '0.2.0' }
+ defaultConfig {
+  applicationId 'ir.delneveshte.app'; minSdk 26; targetSdk 34; versionCode 3; versionName '0.3.0'
+  def endpoint = System.getenv('API_BASE_URL') ?: (file('api-base-url.txt').exists() ? file('api-base-url.txt').text.trim() : '')
+  buildConfigField 'String', 'API_BASE_URL', groovy.json.JsonOutput.toJson(endpoint)
+ }
+ buildFeatures { buildConfig true }
+ signingConfigs {
+  preserved {
+   if (System.getenv('ANDROID_SIGNING_STORE')) {
+    storeFile file(System.getenv('ANDROID_SIGNING_STORE'))
+    storePassword System.getenv('ANDROID_SIGNING_PASSWORD')
+    keyAlias 'androiddebugkey'
+    keyPassword System.getenv('ANDROID_SIGNING_PASSWORD')
+   }
+  }
+ }
+ buildTypes { release { signingConfig signingConfigs.preserved } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  testOptions { unitTests.includeAndroidResources = true }
 }

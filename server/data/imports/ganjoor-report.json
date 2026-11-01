@@ -3,201 +3,182 @@
   "schema": 4,
   "poems_scanned": 138382,
   "poets_scanned": 242,
-  "romantic_candidates": 1580,
-  "selected": 1421,
-  "rights_excluded": 147,
-  "duplicates": 12,
+  "romantic_candidates": 1212,
+  "selected": 1093,
+  "rights_excluded": 111,
+  "duplicates": 8,
   "classification": "multi-signal relational/emotional heuristic plus exact contextual reviews; not full human review",
   "selection_policy": "balanced-v3",
   "reviewed_couplets": 24,
   "excerpt_couplets": 1,
+  "rules_sha256": "03fd0e9e1f90f8c67a0f926dccf9bc29fc1f1d0c88aa7b7b59ce92eb86ea3a62",
   "by_author": {
-    "فردوسی": 23,
-    "حافظ": 13,
-    "مولانا": 46,
-    "نظامی": 7,
-    "سعدی": 56,
-    "عطار": 42,
-    "سنایی": 30,
+    "فردوسی": 3,
+    "حافظ": 9,
+    "مولانا": 27,
+    "نظامی": 6,
+    "سعدی": 42,
+    "عطار": 34,
+    "سنایی": 23,
     "وحشی بافقی": 1,
-    "خاقانی": 10,
-    "انوری": 23,
-    "اوحدی مراغه‌ای": 49,
-    "عراقی": 21,
+    "خاقانی": 6,
+    "انوری": 15,
+    "اوحدی مراغه‌ای": 37,
+    "عراقی": 16,
     "رشحه": 2,
-    "هاتف اصفهانی": 2,
-    "ابوسعید ابوالخیر": 7,
-    "محتشم کاشانی": 12,
-    "فروغی بسطامی": 17,
+    "هاتف اصفهانی": 1,
+    "ابوسعید ابوالخیر": 6,
+    "محتشم کاشانی": 9,
+    "فروغی بسطامی": 14,
     "عبید زاکانی": 2,
     "رودکی": 1,
-    "صائب": 50,
-    "فخرالدین اسعد گرگانی": 14,
-    "فیض کاشانی": 16,
-    "سلمان ساوجی": 18,
-    "بیدل دهلوی": 9,
-    "هلالی جغتایی": 7,
+    "صائب": 37,
+    "فخرالدین اسعد گرگانی": 11,
+    "فیض کاشانی": 14,
+    "سلمان ساوجی": 17,
+    "بیدل دهلوی": 6,
     "قاآنی": 5,
-    "شاه نعمت‌الله ولی": 14,
+    "شاه نعمت‌الله ولی": 11,
     "عرفی": 1,
-    "اسدی توسی": 3,
-    "مهستی گنجوی": 5,
-    "امیرخسرو دهلوی": 40,
-    "سیف فرغانی": 60,
-    "مسعود سعد سلمان": 9,
-    "ابن حسام خوسفی": 7,
-    "وطواط": 2,
-    "جامی": 57,
-    "میبدی": 7,
+    "مهستی گنجوی": 4,
+    "امیرخسرو دهلوی": 39,
+    "سیف فرغانی": 51,
+    "مسعود سعد سلمان": 6,
+    "ابن حسام خوسفی": 6,
+    "وطواط": 1,
+    "جامی": 39,
+    "میبدی": 5,
+    "هلالی جغتایی": 3,
     "ازرقی هروی": 2,
-    "امیر معزی": 9,
-    "حکیم نزاری": 26,
+    "امیر معزی": 6,
+    "حکیم نزاری": 20,
     "سعدالدین وراوینی": 1,
-    "کمال‌الدین اسماعیل": 13,
+    "کمال‌الدین اسماعیل": 10,
     "ظهیر فاریابی": 2,
     "عبدالقادر گیلانی": 2,
-    "قدسی مشهدی": 5,
-    "کمال خجندی": 25,
+    "قدسی مشهدی": 3,
+    "کمال خجندی": 24,
     "همام تبریزی": 10,
-    "شیخ بهایی": 2,
-    "حزین لاهیجی": 7,
-    "شمس مغربی": 4,
+    "حزین لاهیجی": 6,
+    "شمس مغربی": 2,
     "شاهدی": 3,
-    "جلال عضد": 11,
+    "جلال عضد": 9,
     "قصاب کاشانی": 1,
-    "رضاقلی خان هدایت": 4,
+    "رضاقلی خان هدایت": 2,
     "عین‌القضات همدانی": 1,
     "شیخ محمود شبستری": 1,
     "قائم مقام فراهانی": 1,
     "کلیم": 3,
-    "اسیری لاهیجی": 19,
-    "خواجوی کرمانی": 38,
-    "نجم‌الدین رازی": 2,
+    "اسیری لاهیجی": 15,
+    "خواجوی کرمانی": 25,
     "امیر شاهی": 2,
     "خالد نقشبندی": 1,
     "سلطان باهو": 2,
-    "ابن یمین": 22,
-    "جمال‌الدین عبدالرزاق": 5,
+    "ابن یمین": 19,
+    "جمال‌الدین عبدالرزاق": 4,
     "عثمان مختاری": 1,
-    "بابافغانی": 3,
+    "بابافغانی": 2,
     "امامی هروی": 2,
-    "اوحدالدین کرمانی": 10,
+    "اوحدالدین کرمانی": 7,
     "خیالی بخارایی": 2,
-    "آشفتهٔ شیرازی": 19,
-    "سلیم تهرانی": 7,
-    "جویای تبریزی": 7,
-    "اهلی شیرازی": 25,
+    "آشفتهٔ شیرازی": 16,
+    "سلیم تهرانی": 5,
+    "جویای تبریزی": 5,
+    "اهلی شیرازی": 20,
     "غالب دهلوی": 2,
     "عیوقی": 1,
     "سرایندهٔ فرامرزنامه": 1,
-    "ایرانشان": 15,
+    "ایرانشان": 5,
     "سعیدا": 5,
-    "قاسم انوار": 16,
-    "اسیر شهرستانی": 7,
+    "قاسم انوار": 13,
+    "اسیر شهرستانی": 5,
     "حیدر شیرازی": 4,
-    "ملا احمد نراقی": 2,
-    "سلیمی جرونی": 2,
-    "سحاب اصفهانی": 6,
-    "جهان ملک خاتون": 102,
-    "طبیب اصفهانی": 5,
-    "مجیرالدین بیلقانی": 5,
+    "ملا احمد نراقی": 1,
+    "سلیمی جرونی": 1,
+    "سحاب اصفهانی": 4,
+    "جهان ملک خاتون": 91,
+    "طبیب اصفهانی": 4,
+    "مجیرالدین بیلقانی": 3,
     "قطران تبریزی": 4,
-    "اثیر اخسیکتی": 4,
+    "اثیر اخسیکتی": 3,
     "سید حسن غزنوی": 2,
-    "فضولی": 10,
+    "فضولی": 8,
     "نسیمی": 11,
     "آذر بیگدلی": 3,
-    "نشاط اصفهانی": 4,
+    "نشاط اصفهانی": 3,
     "امیرعلیشیر نوایی": 1,
-    "مجد همگر": 16,
-    "مشتاق اصفهانی": 8,
-    "ادیب صابر": 12,
+    "مجد همگر": 12,
+    "مشتاق اصفهانی": 7,
+    "ادیب صابر": 10,
     "نظیری نیشابوری": 3,
-    "واعظ قزوینی": 4,
-    "محمد کوسج": 4,
+    "واعظ قزوینی": 3,
+    "محمد کوسج": 1,
     "حمیدالدین بلخی": 4,
     "ابوالفرج رونی": 1,
-    "یغمای جندقی": 8,
-    "سراج قمری": 2,
-    "رفیق اصفهانی": 12,
+    "یغمای جندقی": 6,
+    "سراج قمری": 1,
+    "رفیق اصفهانی": 9,
     "کوهی": 5,
     "سوزنی سمرقندی": 6,
-    "فیاض لاهیجی": 6,
+    "فیاض لاهیجی": 4,
     "قوامی رازی": 5,
-    "سیدای نسفی": 11,
-    "میلی": 4,
-    "طغرای مشهدی": 3,
+    "سیدای نسفی": 4,
+    "میلی": 2,
+    "طغرای مشهدی": 2,
     "فصیحی هروی": 2,
-    "میرداماد": 6,
-    "صوفی محمد هروی": 3,
+    "میرداماد": 4,
     "نورعلیشاه": 1,
     "ظهیری سمرقندی": 1,
     "ابن عماد": 1,
-    "خواجه عبدالله انصاری": 3,
-    "سام میرزا صفوی": 7,
-    "ناصر بخارایی": 21,
-    "جنید شیرازی": 3,
-    "مجذوب تبریزی": 10,
+    "خواجه عبدالله انصاری": 2,
+    "سام میرزا صفوی": 6,
+    "ناصر بخارایی": 19,
+    "جنید شیرازی": 2,
+    "مجذوب تبریزی": 9,
     "ساغر کنگاوری": 4,
-    "نورس دماوندی": 5,
-    "فتحعلی‌شاه": 8,
-    "ناصر بجه‌ای": 5,
-    "واقف لاهوری": 21,
+    "نورس دماوندی": 4,
+    "فتحعلی‌شاه": 4,
+    "ناصر بجه‌ای": 3,
+    "واقف لاهوری": 18,
     "طالب آملی": 5,
     "افضل‌الدین کرمانی": 1
   },
   "review_samples": [
     {
-      "text": "برآید به دست تو هوش پدرش\nاز آن درد گردد پر از کینه سرش",
+      "text": "که خرم کنم دل به دیدار تو\nکنون چون پسندم من آزار تو",
       "author": "فردوسی",
-      "title": "بخش ۳ - کابوس ضحاک و پیشبینی موبدان برآمدن فریدون را",
-      "source_url": "https://ganjoor.net/ferdousi/shahname/zahak/sh3#bn57",
+      "title": "بخش ۱۲ - دیدار رستم و اسفندیار بر لب هیرمند، آفرین دوسویه، دعوت به خان و سرباز زدن از بند",
+      "source_url": "https://ganjoor.net/ferdousi/shahname/esfandyar/sh12#bn47",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 56,
+      "couplet_index": 46,
       "selection_policy": "balanced-v3",
       "selection_score": 7,
       "selection_signals": [
         "address",
+        "speaker",
         "together",
-        "relationship"
+        "joy"
       ]
     },
     {
-      "text": "تبه گردد آن هم به دست تو بر\nبدین کین کِشد گُرزهٔ گاوسر",
+      "text": "به گلنار ماند همی چهر تو\nبه شادی بخندد دل از مهر تو",
       "author": "فردوسی",
-      "title": "بخش ۳ - کابوس ضحاک و پیشبینی موبدان برآمدن فریدون را",
-      "source_url": "https://ganjoor.net/ferdousi/shahname/zahak/sh3#bn59",
+      "title": "بخش ۱۲ - شکار بهرام گور، پریدن طغری و خواستگاری سه دختر برزین",
+      "source_url": "https://ganjoor.net/ferdousi/shahname/bahgoor/sh12#bn80",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 58,
+      "couplet_index": 79,
       "selection_policy": "balanced-v3",
       "selection_score": 7,
       "selection_signals": [
         "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
-      "text": "حافظ از دولت عشق تو سلیمانی شد\nیعنی از وصل تواَش نیست بجز باد به دست",
-      "author": "حافظ",
-      "title": "غزل شمارهٔ ۲۴",
-      "source_url": "https://ganjoor.net/hafez/ghazal/sh24#bn7",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 6,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
+        "affection",
+        "joy",
         "relationship"
       ]
     },
@@ -221,40 +202,77 @@
       ]
     },
     {
-      "text": "بُد بی‌تو چنگ و نی حزین برد آن کنار و بوسه این\nدف گفت می‌زن بر رخم تا روی من یابد بها",
-      "author": "مولانا",
-      "title": "غزل شمارهٔ ۷",
-      "source_url": "https://ganjoor.net/moulavi/shams/ghazalsh/sh7#bn19",
+      "text": "بداد لعلِ لبت بوسه‌ای به صد زاری\nگرفت کام دلم زو به صد هزار اِلحاح",
+      "author": "حافظ",
+      "title": "غزل شمارهٔ ۹۸",
+      "source_url": "https://ganjoor.net/hafez/ghazal/sh98#bn6",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 18,
+      "couplet_index": 5,
       "selection_policy": "balanced-v3",
-      "selection_score": 9,
+      "selection_score": 7,
       "selection_signals": [
         "address",
         "speaker",
-        "longing",
         "together",
         "imagery"
       ]
     },
     {
-      "text": "لب را تو به هر بوسه و هر لوت میالا\nتا از لب دلدار شود مست و شکرخا",
+      "text": "به جان پاک تو ای معدن سخا و وفا\nکه صبر نیست مرا بی‌تو ای عزیز بیا",
       "author": "مولانا",
-      "title": "غزل شمارهٔ ۹۶",
-      "source_url": "https://ganjoor.net/moulavi/shams/ghazalsh/sh96#bn1",
+      "title": "غزل شمارهٔ ۲۲۷",
+      "source_url": "https://ganjoor.net/moulavi/shams/ghazalsh/sh227#bn1",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
       "couplet_index": 0,
       "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "affection",
+        "longing"
+      ]
+    },
+    {
+      "text": "روی کسی سرخ نشد بی‌مدد لعل لبت\nبی تو اگر سرخ بود از اثر غازه شود",
+      "author": "مولانا",
+      "title": "غزل شمارهٔ ۵۴۶",
+      "source_url": "https://ganjoor.net/moulavi/shams/ghazalsh/sh546#bn5",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 4,
+      "selection_policy": "balanced-v3",
       "selection_score": 8,
       "selection_signals": [
         "address",
-        "affection",
+        "longing",
+        "together",
+        "imagery"
+      ]
+    },
+    {
+      "text": "ندارم زَهرهٔ بوس لبانت\nچه بوسم؟ آستین یا آستانت‌؟",
+      "author": "نظامی",
+      "title": "بخش ۴۱ - مراد طلبیدن خسرو از شیرین و مانع شدن او",
+      "source_url": "https://ganjoor.net/nezami/5ganj/khosro-shirin/sh41#bn78",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 77,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
         "together",
         "imagery"
       ]
@@ -276,25 +294,6 @@
         "speaker",
         "longing",
         "together"
-      ]
-    },
-    {
-      "text": "دهان جز من از جام لبت دور\nسَرِ جز من ز طوق غبغبت دور",
-      "author": "نظامی",
-      "title": "بخش ۷۰ - پاسخ دادن خسرو شیرین را",
-      "source_url": "https://ganjoor.net/nezami/5ganj/khosro-shirin/sh70#bn3",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 2,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "speaker",
-        "together",
-        "imagery"
       ]
     },
     {
@@ -330,24 +329,6 @@
       ]
     },
     {
-      "text": "ور به دست تو آمده است اجلم\nقَدْ رَضیْتُ بِما جَرى قَلَما",
-      "author": "عطار",
-      "title": "غزل شمارهٔ ۸",
-      "source_url": "https://ganjoor.net/attar/divana/ghazal-attar/sh8#bn3",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 2,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
       "text": "دلبرم در حسن طاق افتاده است\nقسم من زو اشتیاق افتاده است",
       "author": "عطار",
       "title": "غزل شمارهٔ ۲۵",
@@ -364,6 +345,25 @@
         "speaker",
         "affection",
         "longing"
+      ]
+    },
+    {
+      "text": "هرچه پیش تو کشم لعل لبت\nاز من بی سر و پا نپذیرد",
+      "author": "عطار",
+      "title": "غزل شمارهٔ ۲۲۰",
+      "source_url": "https://ganjoor.net/attar/divana/ghazal-attar/sh220#bn7",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 6,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "together",
+        "imagery"
       ]
     },
     {
@@ -424,24 +424,6 @@
       ]
     },
     {
-      "text": "عشق تو قضای آسمانی است\nوصل تو بقای جاودانی است",
-      "author": "خاقانی",
-      "title": "غزل شمارهٔ ۶۵",
-      "source_url": "https://ganjoor.net/khaghani/divankh/ghazalkh/sh65#bn1",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 0,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
       "text": "روی تو خوان سیم و لبت خوش نمک بود\nمن ز آب دیده با نمکی دیگر آیمت",
       "author": "خاقانی",
       "title": "غزل شمارهٔ ۸۱",
@@ -461,21 +443,22 @@
       ]
     },
     {
-      "text": "پایم از عشق تو در سنگ آمدست\nعقل را با تو قبا تنگ آمدست",
-      "author": "انوری",
-      "title": "غزل شمارهٔ ۲۱",
-      "source_url": "https://ganjoor.net/anvari/divan-anvari/ghazala/sh21#bn1",
+      "text": "از آرزوی وصل تو جان و دلم نماند\nکآمد شد فراق تو کمتر نمی‌شود",
+      "author": "خاقانی",
+      "title": "غزل شمارهٔ ۹۹",
+      "source_url": "https://ganjoor.net/khaghani/divankh/ghazalkh/sh99#bn8",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 0,
+      "couplet_index": 7,
       "selection_policy": "balanced-v3",
-      "selection_score": 7,
+      "selection_score": 8,
       "selection_signals": [
         "address",
-        "together",
-        "relationship"
+        "speaker",
+        "longing",
+        "together"
       ]
     },
     {
@@ -489,11 +472,31 @@
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
       "couplet_index": 0,
       "selection_policy": "balanced-v3",
+      "selection_score": 8,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "affection",
+        "together"
+      ]
+    },
+    {
+      "text": "تنم در بند هجر تو اسیرست\nدلم در دست عشق تو زبونست",
+      "author": "انوری",
+      "title": "غزل شمارهٔ ۳۶",
+      "source_url": "https://ganjoor.net/anvari/divan-anvari/ghazala/sh36#bn2",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 1,
+      "selection_policy": "balanced-v3",
       "selection_score": 7,
       "selection_signals": [
         "address",
-        "together",
-        "relationship"
+        "speaker",
+        "affection",
+        "longing"
       ]
     },
     {
@@ -630,24 +633,6 @@
       ]
     },
     {
-      "text": "راه وصل تو، راهِ پرآسیب\nدرد عشقِ تو، دردِ بی‌درمان",
-      "author": "هاتف اصفهانی",
-      "title": "ترجیع بند - که یکی هست و هیچ نیست جز او",
-      "source_url": "https://ganjoor.net/hatef/divan-hatef/tarjeeband#bn4",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 3,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
       "text": "ز اول ره عشق تو مرا سهل نمود\nپنداشت رسد به منزل وصل تو زود",
       "author": "ابوسعید ابوالخیر",
       "title": "رباعی شمارهٔ ۲۷۰",
@@ -662,26 +647,27 @@
       "selection_signals": [
         "address",
         "speaker",
-        "together",
-        "relationship"
+        "affection",
+        "together"
       ]
     },
     {
-      "text": "در عشق تو حالتیش باشد که دمی\nهم با تو و هم بی تو قرارش نبود",
+      "text": "هرگز دلم از یاد تو غافل نشود\nگر جان بشود مهر تو از دل نشود",
       "author": "ابوسعید ابوالخیر",
-      "title": "رباعی شمارهٔ ۲۸۰",
-      "source_url": "https://ganjoor.net/abusaeed/robaee-aa/sh280#bn2",
+      "title": "رباعی شمارهٔ ۲۹۸",
+      "source_url": "https://ganjoor.net/abusaeed/robaee-aa/sh298#bn1",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 1,
+      "couplet_index": 0,
       "selection_policy": "balanced-v3",
       "selection_score": 9,
       "selection_signals": [
         "address",
+        "speaker",
+        "affection",
         "longing",
-        "together",
         "relationship"
       ]
     },
@@ -705,21 +691,22 @@
       ]
     },
     {
-      "text": "غمزه زنان آمدی شاهسوار اجل\nتیغ به دست تو داد خود به کناری نشست",
+      "text": "بهشت وصل توام کشت ز اختلاط رقیبان\nمن و فراق تو کان دوزخ این عذاب ندارد",
       "author": "محتشم کاشانی",
-      "title": "شمارهٔ  ۸۸",
-      "source_url": "https://ganjoor.net/mohtasham/divan-moh/ghazal-moh/sh88#bn4",
+      "title": "شمارهٔ  ۱۷۱",
+      "source_url": "https://ganjoor.net/mohtasham/divan-moh/ghazal-moh/sh171#bn10",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 3,
+      "couplet_index": 9,
       "selection_policy": "balanced-v3",
-      "selection_score": 7,
+      "selection_score": 8,
       "selection_signals": [
         "address",
-        "together",
-        "relationship"
+        "speaker",
+        "longing",
+        "together"
       ]
     },
     {
@@ -856,40 +843,42 @@
       ]
     },
     {
-      "text": "کلید گنجها پیش تو آرم\nکم و بیشم به دست تو سپارم",
+      "text": "بدان تا مهر تو بخشد به رامین\nپس او خسرو بود ما را تو شیرین",
       "author": "فخرالدین اسعد گرگانی",
-      "title": "بخش ۱۷ - آمدن شاه موبد به گوراب به جهت ویس",
-      "source_url": "https://ganjoor.net/asad/veysoramin/sh17#bn27",
+      "title": "بخش ۲۷ - اندر باز آمدن دایه به نزدیک رامین به باغ",
+      "source_url": "https://ganjoor.net/asad/veysoramin/sh27#bn230",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 26,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
-      "text": "و گر گیتی به رویم سختی آرد\nمرا روزی به دست تو سپارد",
-      "author": "فخرالدین اسعد گرگانی",
-      "title": "بخش ۱۸ - جواب دادن ویس رسول شاه موبد را",
-      "source_url": "https://ganjoor.net/asad/veysoramin/sh18#bn40",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 39,
+      "couplet_index": 229,
       "selection_policy": "balanced-v3",
       "selection_score": 8,
       "selection_signals": [
         "address",
         "speaker",
-        "together",
+        "affection",
+        "joy",
         "relationship"
+      ]
+    },
+    {
+      "text": "توی چشم مرا خورشید روشن\nمرا دیدار تو باید نه داشن",
+      "author": "فخرالدین اسعد گرگانی",
+      "title": "بخش ۲۸ - دیدن ویس  رامین را و عاشق شدن بر او",
+      "source_url": "https://ganjoor.net/asad/veysoramin/sh28#bn68",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 67,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "together",
+        "imagery"
       ]
     },
     {
@@ -969,24 +958,6 @@
       ]
     },
     {
-      "text": "دل به‌دست تو وما ازتو، دگر مانع‌کیست\nخودنمایی نکند آینه آغاز چرا",
-      "author": "بیدل دهلوی",
-      "title": "غزل شمارهٔ ۶۷",
-      "source_url": "https://ganjoor.net/bidel/ghazalbi/sh67#bn4",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 3,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
       "text": "نفس از تو صبح‌خرمن نگه از تو گل‌به‌دامن\nتویی آنکه در بر من تهی از من است جایت",
       "author": "بیدل دهلوی",
       "title": "غزل شمارهٔ ۸۷۸",
@@ -1006,41 +977,22 @@
       ]
     },
     {
-      "text": "هیچ رنجی به دست تو مرساد!\nچشم‌زخمی به شست تو مرساد!",
-      "author": "هلالی جغتایی",
-      "title": "بخش ۲۶ - در تعریف کمان شاه گوید",
-      "source_url": "https://ganjoor.net/helali/shahodarvish/sh26#bn24",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 23,
-      "selection_policy": "balanced-v3",
-      "selection_score": 8,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship",
-        "imagery"
-      ]
-    },
-    {
-      "text": "هست بی من بسی شکست تو را\nکه نگیرد کسی به دست تو را",
-      "author": "هلالی جغتایی",
-      "title": "بخش ۲۷ - مناظرهٔ تیر و کمان با یکدیگر",
-      "source_url": "https://ganjoor.net/helali/shahodarvish/sh27#bn8",
+      "text": "مرا به فکر لبت‌ کرد غنچهٔ گرداب\nنفس نفس به لب بحر بوسه دادن موج",
+      "author": "بیدل دهلوی",
+      "title": "غزل شمارهٔ ۸۹۰",
+      "source_url": "https://ganjoor.net/bidel/ghazalbi/sh890#bn8",
       "source": "ganjoor",
       "language": "fa",
       "rights": "classical-public-domain; reviewed named classical author",
       "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
       "couplet_index": 7,
       "selection_policy": "balanced-v3",
-      "selection_score": 8,
+      "selection_score": 7,
       "selection_signals": [
         "address",
         "speaker",
         "together",
-        "relationship"
+        "imagery"
       ]
     },
     {
@@ -1082,25 +1034,6 @@
       ]
     },
     {
-      "text": "در حرم ما در آ محرم مستانه شو\nمیکدهٔ عاشقان با تو بگویم کجاست",
-      "author": "شاه نعمت‌الله ولی",
-      "title": "غزل شمارهٔ ۱۹۴",
-      "source_url": "https://ganjoor.net/shahnematollah/ghazalshv/sh194#bn3",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 2,
-      "selection_policy": "balanced-v3",
-      "selection_score": 8,
-      "selection_signals": [
-        "address",
-        "speaker",
-        "affection",
-        "together"
-      ]
-    },
-    {
       "text": "گر زانکه نزد بر لب من بوسه دل آرام\nبر لعل لب ما تو بببین کاین چه نشان است",
       "author": "شاه نعمت‌الله ولی",
       "title": "غزل شمارهٔ ۴۵۸",
@@ -1120,6 +1053,25 @@
       ]
     },
     {
+      "text": "حالم ز عاشقان پرس تا با تو باز گویند\nاز عاقلان چه پرسی عاقل مرا چه داند",
+      "author": "شاه نعمت‌الله ولی",
+      "title": "غزل شمارهٔ ۵۹۲",
+      "source_url": "https://ganjoor.net/shahnematollah/ghazalshv/sh592#bn3",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 2,
+      "selection_policy": "balanced-v3",
+      "selection_score": 8,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "affection",
+        "together"
+      ]
+    },
+    {
       "text": "در باغ دلم که روضه نعتش گوید\nآب طلبت روی چمن می شوید",
       "author": "عرفی",
       "title": "رباعی شمارهٔ ۸۴",
@@ -1136,42 +1088,6 @@
         "speaker",
         "together",
         "imagery"
-      ]
-    },
-    {
-      "text": "گر این کار گردد به دست تو راست\nدر ایران جهان پهلوانی تراست",
-      "author": "اسدی توسی",
-      "title": "بخش ۱۹ - هنرها   نمودن   گرشاسب   پیش   ضحاک",
-      "source_url": "https://ganjoor.net/asadi/garshaspname/sh19#bn26",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 25,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
-      ]
-    },
-    {
-      "text": "بهو شاد شد گفت اگر ز آنکه بخت\nبرآرد به دست تو این کار سخت",
-      "author": "اسدی توسی",
-      "title": "بخش ۳۵ - قصه زنگی با پهلوان گرشاسب",
-      "source_url": "https://ganjoor.net/asadi/garshaspname/sh35#bn12",
-      "source": "ganjoor",
-      "language": "fa",
-      "rights": "classical-public-domain; reviewed named classical author",
-      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
-      "couplet_index": 11,
-      "selection_policy": "balanced-v3",
-      "selection_score": 7,
-      "selection_signals": [
-        "address",
-        "together",
-        "relationship"
       ]
     },
     {
@@ -1246,8 +1162,8 @@
       "selection_signals": [
         "address",
         "speaker",
-        "together",
-        "relationship"
+        "affection",
+        "together"
       ]
     },
     {
@@ -1268,11 +1184,106 @@
         "together",
         "imagery"
       ]
+    },
+    {
+      "text": "روز وصل تو که احیای من کشته کند؟\nای تو جان داده به لب مردهٔ بویحیی را",
+      "author": "سیف فرغانی",
+      "title": "شمارهٔ ۸",
+      "source_url": "https://ganjoor.net/seyf/divan-seyf/ghazalsk/sh8#bn14",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 13,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "together",
+        "imagery"
+      ]
+    },
+    {
+      "text": "در تن خزد ز بویه وصل تو مور مور\nدر من جهد ز انده هجر تو مار مار",
+      "author": "مسعود سعد سلمان",
+      "title": "شمارهٔ ۶",
+      "source_url": "https://ganjoor.net/masood/divan-masood/ghazalmk/sh6#bn2",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 1,
+      "selection_policy": "balanced-v3",
+      "selection_score": 8,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "longing",
+        "together"
+      ]
+    },
+    {
+      "text": "تا دو لبت از دور برانده ست مرا\nجز روی تو آرزو نمانده ست مرا",
+      "author": "مسعود سعد سلمان",
+      "title": "شمارهٔ ۱",
+      "source_url": "https://ganjoor.net/masood/divan-masood/robaeemss/sh1#bn2",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 1,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "together",
+        "imagery"
+      ]
+    },
+    {
+      "text": "ما را به غیرِ یادِ تو، اندر ضَمیر نیست\nدِل را دِگَر ز صحبتِ جانان، گُزیر نیست",
+      "author": "ابن حسام خوسفی",
+      "title": "غزل شمارهٔ ۳۱",
+      "source_url": "https://ganjoor.net/ebnehesam/ghazalebn/sh31#bn1",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 0,
+      "selection_policy": "balanced-v3",
+      "selection_score": 7,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "affection",
+        "longing"
+      ]
+    },
+    {
+      "text": "بی تو حرامست تماشای باغ\nبا تو مرا از همه عالم فراغ",
+      "author": "ابن حسام خوسفی",
+      "title": "غزل شمارهٔ ۱۱۱",
+      "source_url": "https://ganjoor.net/ebnehesam/ghazalebn/sh111#bn1",
+      "source": "ganjoor",
+      "language": "fa",
+      "rights": "classical-public-domain; reviewed named classical author",
+      "source_revision": "34f4ab3e463903f9399d7ca208b9333911389f94",
+      "couplet_index": 0,
+      "selection_policy": "balanced-v3",
+      "selection_score": 8,
+      "selection_signals": [
+        "address",
+        "speaker",
+        "longing",
+        "together"
+      ]
     }
   ],
   "archive_sha256": "e09a97e2809a9dde80497cab3531efa5ab017d4ad5ddfbddc9578eebe245c3f5",
   "manifest_poems": 138382,
   "manifest_poets": 242,
-  "completed_at_utc": "2026-11-01T21:02:06Z",
-  "output_sha256": "3b9c8084542fc8b684d027fbfc71ec82680a8b714d138c1c706dd857bde8dc25"
+  "completed_at_utc": "2026-11-01T21:08:06Z",
+  "output_sha256": "0d622be95967d573f6a2d82b4bc39a711b6df894eb736993abcd27c942a631a7"
 }

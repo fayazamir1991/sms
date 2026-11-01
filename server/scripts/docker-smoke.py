@@ -15,7 +15,12 @@ volume = name + '-data'
 password = secrets.token_urlsafe(32)
 
 def docker(*args, capture=True):
-    return subprocess.run(['docker', *args], check=True, text=True, capture_output=capture).stdout
+    result = subprocess.run(['docker', *args], text=True, capture_output=capture)
+    if result.returncode:
+        if capture:
+            print(result.stderr, file=sys.stderr)
+        raise RuntimeError('Docker smoke command failed')
+    return result.stdout
 
 with tempfile.TemporaryDirectory() as directory:
     env = Path(directory) / 'runtime.env'

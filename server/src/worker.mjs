@@ -46,8 +46,8 @@ async function suggestions(request,env){
  const limit=Number(url.searchParams.get('limit')||'20');
  requireValue(number(limit,1,50));requireValue(category==='همه'||CATEGORIES.has(category));
  const query=category==='همه'
-  ?env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 ORDER BY RANDOM() LIMIT ?').bind(limit)
-  :env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 AND c.category=? ORDER BY RANDOM() LIMIT ?').bind(category,limit);
+  ?env.DB.prepare('SELECT c.id,c.body,c.category,COALESCE(o.source,'دل‌نوشته') AS source,COALESCE(o.author,'') AS author,COALESCE(o.source_url,'') AS source_url,COALESCE(o.rights,'') AS rights,COALESCE(o.language,'fa') AS language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 ORDER BY RANDOM() LIMIT ?').bind(limit)
+  :env.DB.prepare('SELECT c.id,c.body,c.category,COALESCE(o.source,'دل‌نوشته') AS source,COALESCE(o.author,'') AS author,COALESCE(o.source_url,'') AS source_url,COALESCE(o.rights,'') AS rights,COALESCE(o.language,'fa') AS language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 AND c.category=? ORDER BY RANDOM() LIMIT ?').bind(category,limit);
  const {results}=await query.all();return json({messages:results,source:'server'});
 }
 function validateMessage(m){
@@ -144,7 +144,7 @@ async function adminApi(request,env,path){
   const queries={
    webpages:'SELECT source,url,fetched_at,done FROM catalog_web_pages ORDER BY fetched_at,url',
    imports:'SELECT job,run_key,status,started_at,finished_at,added,detail FROM catalog_jobs ORDER BY started_at DESC',
-   catalog:'SELECT c.id,c.body,c.category,c.active,c.created_at,o.source,o.source_url,o.author,o.language,o.rights FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id ORDER BY c.created_at DESC,c.id',
+   catalog:'SELECT c.id,c.body,c.category,c.active,c.created_at,COALESCE(o.source,'دل‌نوشته') AS source,COALESCE(o.source_url,'') AS source_url,COALESCE(o.author,'') AS author,COALESCE(o.language,'fa') AS language,o.rights FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id ORDER BY c.created_at DESC,c.id',
    installations:'SELECT id,device_hash,app_version,enabled,created_at,last_seen_at FROM installations ORDER BY created_at DESC,id',
    queue:'SELECT installation_id,id,body_cipher,recipient_cipher,status,sim_id,revision,approved_at,planned_at,submitted_at,updated_at FROM queued_messages ORDER BY updated_at DESC,id',
    events:'SELECT installation_id,id,message_id,status,revision,occurred_at FROM message_events ORDER BY occurred_at DESC,id',

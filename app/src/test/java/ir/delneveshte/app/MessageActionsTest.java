@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Looper;
 import android.telephony.SubscriptionManager;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,7 +61,7 @@ public class MessageActionsTest {
             MainActivity activity = controller.get();
             View action = findText(activity.getWindow().getDecorView(), "افزودن به صف");
             assertNotNull(action);
-            action.performClick();
+            click(action);
             assertEquals(1, store.queue().size());
             assertNull(ShadowAlertDialog.getLatestAlertDialog());
             assertNotNull(findText(activity.getWindow().getDecorView(), "پیشنهادهای تازه"));
@@ -77,12 +78,12 @@ public class MessageActionsTest {
 
     @Test public void editingAddsExactEditedTextWithoutAnotherDialog() {
         try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            findText(controller.get().getWindow().getDecorView(), "ویرایش و زمان‌بندی").performClick();
+            click(findText(controller.get().getWindow().getDecorView(), "ویرایش و زمان‌بندی"));
             AlertDialog editor = ShadowAlertDialog.getLatestAlertDialog();
             assertNotNull(editor);
             EditText input = findType(editor.getWindow().getDecorView(), EditText.class);
             input.setText("دلم یک چای دونفره می‌خواهد ☕💕");
-            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            click(editor.getButton(AlertDialog.BUTTON_POSITIVE));
             assertFalse(editor.isShowing());
             assertSame(editor, ShadowAlertDialog.getLatestAlertDialog());
             assertEquals(1, store.queue().size());
@@ -92,12 +93,12 @@ public class MessageActionsTest {
 
     @Test public void cancellingImmediateSendDoesNotCreateOrQueueMessage() {
         try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            findText(controller.get().getWindow().getDecorView(), "ارسال فوری").performClick();
+            click(findText(controller.get().getWindow().getDecorView(), "ارسال فوری"));
             AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
             assertNotNull(confirmation);
             assertTrue(store.queue().isEmpty());
             assertTrue(store.history().isEmpty());
-            confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+            click(confirmation.getButton(AlertDialog.BUTTON_NEGATIVE));
             assertTrue(store.queue().isEmpty());
             assertTrue(store.history().isEmpty());
         }
@@ -117,13 +118,13 @@ public class MessageActionsTest {
 
     @Test public void confirmingImmediateSendUsesThePreviewedRecipientAndNeverQueues() {
         try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            findText(controller.get().getWindow().getDecorView(), "ارسال فوری").performClick();
+            click(findText(controller.get().getWindow().getDecorView(), "ارسال فوری"));
             AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
             assertTrue(store.history().isEmpty());
             Settings changed = settings.copy();
             changed.recipient = "+989351234567";
             store.saveSettings(changed);
-            confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            click(confirmation.getButton(AlertDialog.BUTTON_POSITIVE));
             assertTrue(store.queue().isEmpty());
             assertEquals(1, store.history().size());
             Message sent = store.history().get(0);
@@ -143,6 +144,12 @@ public class MessageActionsTest {
         store.recordPart(id, 1, true, "");
         assertEquals("SENT", store.get(id).status);
         assertTrue(store.queue().isEmpty());
+    }
+
+    private static void click(View view) {
+        assertNotNull(view);
+        view.performClick();
+        shadowOf(Looper.getMainLooper()).idle();
     }
 
     private static View findText(View root, String text) {

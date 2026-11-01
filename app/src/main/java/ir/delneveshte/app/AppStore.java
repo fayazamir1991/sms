@@ -243,15 +243,19 @@ public final class AppStore {
     public List<String> cachedSuggestions(String category,String nickname) {
         String name=nickname==null?"":nickname.trim().replaceAll("\\s+"," ");if(name.isEmpty())name="عزیزم";
         synchronized(LOCK) {
+            List<String[]> pool=new ArrayList<>();
+            try(Cursor c=db.rawQuery("SELECT id,body FROM catalog_cache WHERE NOT EXISTS(SELECT 1 FROM messages m WHERE m.body=catalog_cache.body)"+("همه".equals(category)?"":" AND category=?")+" ORDER BY RANDOM()","همه".equals(category)?null:new String[]{category})) {while(c.moveToNext())pool.add(new String[]{c.getString(0),c.getString(1)});}
+            java.util.Set<String> approved=new java.util.HashSet<>();
+            try(Cursor c=db.rawQuery("SELECT body FROM messages",null)){while(c.moveToNext())approved.add(c.getString(0));}
+            final String actualName=name;pool.removeIf(item->approved.contains(item[1].replace("{name}",actualName)));
+            android.content.SharedPreferences seenPrefs=app.getSharedPreferences("catalog_seen",0);
+            java.util.Set<String> seen=new java.util.HashSet<>(seenPrefs.getStringSet("ids",java.util.Collections.emptySet()));
+            List<String[]> selected=new ArrayList<>();
+            for(String[] item:pool)if(!seen.contains(item[0])&&selected.size()<5)selected.add(item);
+            if(selected.isEmpty()) {for(String[] item:pool)seen.remove(item[0]);for(String[] item:pool){if(selected.size()==5)break;selected.add(item);}}
             List<String> out=new ArrayList<>();
-            try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache"+("همه".equals(category)?"":" WHERE category=?")+" ORDER BY RANDOM() LIMIT 5","همه".equals(category)?null:new String[]{category})) {
-                while(c.moveToNext()){
-                    String raw=c.getString(0),rendered=raw.replace("{name}",name);
-                    String meta=app.getSharedPreferences("catalog_metadata",0).getString(raw,"{}");
-                    app.getSharedPreferences("catalog_metadata",0).edit().putString(rendered,meta).apply();out.add(rendered);
-                }
-            }
-            return out;
+            for(String[] item:selected){seen.add(item[0]);String raw=item[1],rendered=raw.replace("{name}",name);String meta=app.getSharedPreferences("catalog_metadata",0).getString(raw,"{}");app.getSharedPreferences("catalog_metadata",0).edit().putString(rendered,meta).apply();out.add(rendered);}
+            seenPrefs.edit().putStringSet("ids",seen).apply();return out;
         }
     }
 }

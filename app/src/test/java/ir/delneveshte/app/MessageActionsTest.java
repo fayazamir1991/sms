@@ -42,7 +42,7 @@ public class MessageActionsTest {
         field.set(null, null);
         app.deleteDatabase("messages.db");
         app.getSharedPreferences("settings", 0).edit().clear().commit();
-        app.getSharedPreferences("cloud", 0).edit().clear().commit();
+        app.getSharedPreferences("cloud", 0).edit().clear().putLong("last_catalog",System.currentTimeMillis()).commit();
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(
                 Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS);
         shadowOf(app.getPackageManager()).setSystemFeature(PackageManager.FEATURE_TELEPHONY, true);

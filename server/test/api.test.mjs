@@ -84,3 +84,11 @@ test('a database outage returns a retryable error without echoing personal data'
  const response=await handle(request('/api/v1/sync',{messages:[message()]}),env);
  assert.equal(response.status,503);assert.ok(!(await response.text()).includes('private diagnostic'));
 });
+
+test('suggestion batches prefer content not previously offered to the same installation',async()=>{
+ const env=await environment();await register(env);
+ for(let i=0;i<12;i++)await env.DB.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at) VALUES(?,?,?,?,1,?)').bind(crypto.randomUUID(),'پیام تازه '+i+' 💕','rotation-'+i,'کوتاه',Date.now()).run();
+ const get=async()=>new Set((await (await handle(request('/api/v1/messages/suggestions?limit=5'),env)).json()).messages.map(r=>r.id));
+ const first=await get(),second=await get();assert.equal(first.size,5);assert.equal(second.size,5);assert.ok([...first].every(id=>!second.has(id)));
+ env.DB.close();
+});

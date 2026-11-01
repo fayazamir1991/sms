@@ -101,6 +101,17 @@ public class CloudSyncTest {
         long id=store.approve(selected,settings,"SIM");assertEquals(body,store.get(id).body);
         assertFalse(store.get(id).body.contains("namnak"));
     }
+    @Test public void unseenSuggestionsRotateAndApprovedTextsStayExcluded() throws Exception {
+        AppStore store=new AppStore(app);JSONArray rows=new JSONArray();
+        for(int i=0;i<12;i++)rows.put(new JSONObject().put("id",UUID.randomUUID().toString()).put("body","پیام عاشقانهٔ "+i+" 💕"));
+        store.replaceCatalog("کوتاه",rows);
+        java.util.Set<String> first=new java.util.HashSet<>(store.cachedSuggestions("کوتاه","جانم"));
+        java.util.Set<String> second=new java.util.HashSet<>(new AppStore(app).cachedSuggestions("کوتاه","جانم"));
+        assertEquals(5,first.size());assertEquals(5,second.size());assertTrue(java.util.Collections.disjoint(first,second));
+        java.util.List<String> third=store.cachedSuggestions("کوتاه","جانم");assertEquals(2,third.size());
+        String approved=first.iterator().next();store.approve(approved,settings,"SIM");
+        for(int i=0;i<6;i++)assertFalse(store.cachedSuggestions("کوتاه","جانم").contains(approved));
+    }
     @Test public void credentialsPersistAcrossConfigInstances() {
         CloudConfig first=new CloudConfig(app),second=new CloudConfig(app);
         assertEquals(first.installationId(),second.installationId());assertEquals(first.credential(),second.credential());

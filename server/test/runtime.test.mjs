@@ -29,7 +29,7 @@ test('persistent SQLite migrations and seed preserve admin edits and private log
   const message={id:crypto.randomUUID(),body:'با تو زندگی زیباست 🌷❤️',recipient:'+989121234567',sim_id:7,status:'SENT',revision:3,approved_at:1000,submitted_at:2000,events:[]};
   assert.equal((await handle(post('/api/v1/sync',{messages:[message]}),env)).status,200);
   db.close();db=new SQLiteStore(file);db.migrate();
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,6);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM app_migrations').first()).n,7);
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
   assert.equal((await db.prepare('SELECT body FROM catalog_messages WHERE id=?').bind(row.id).first()).body,'متن مدیر محفوظ می‌ماند 🌷');
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM sent_logs').first()).n,1);

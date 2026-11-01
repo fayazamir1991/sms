@@ -41,15 +41,17 @@ async function register(request,env){
  return json({installation_id:id,registered:true},old?200:201);
 }
 async function suggestions(request,env){
- await authenticate(request,env);
- const url=new URL(request.url),category=url.searchParams.get('category')||'همه';
- const limit=Number(url.searchParams.get('limit')||'20');
- requireValue(number(limit,1,50));requireValue(category==='همه'||CATEGORIES.has(category));
- const query=category==='همه'
-  ?env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 ORDER BY RANDOM() LIMIT ?').bind(limit)
-  :env.DB.prepare('SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE c.active=1 AND c.category=? ORDER BY RANDOM() LIMIT ?').bind(category,limit);
- const {results}=await query.all();return json({messages:results,source:'server'});
+ const installation=await authenticate(request,env),url=new URL(request.url),category=url.searchParams.get('category')||'همه';
+ const limit=Number(url.searchParams.get('limit')||'20');requireValue(number(limit,1,50));requireValue(category==='همه'||CATEGORIES.has(category));
+ const sql=`SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id LEFT JOIN catalog_offers h ON h.catalog_id=c.id AND h.installation_id=? WHERE c.active=1`;
+ const base=sql;
+ const args=[installation.id];if(category!=='همه')args.push(category);args.push(Date.now()-24*60*60*1000,limit);
+ const {results}=await env.DB.prepare(base+(category==='همه'?'':' AND c.category=?')+' ORDER BY (h.served_at IS NULL) DESC,(c.created_at>?) DESC,h.served_at ASC,RANDOM() LIMIT ?').bind(...args).all();
+ const now=Date.now();
+ for(let i=0;i<results.length;i+=20){const chunk=results.slice(i,i+20);if(chunk.length)await env.DB.prepare('INSERT INTO catalog_offers(installation_id,catalog_id,served_at) VALUES '+chunk.map(()=>'(?,?,?)').join(',')+' ON CONFLICT(installation_id,catalog_id) DO UPDATE SET served_at=excluded.served_at').bind(...chunk.flatMap(row=>[installation.id,row.id,now])).run();}
+ return json({messages:results,source:'server',fetched_at:now});
 }
+
 function validateMessage(m){
  requireValue(m&&UUID.test(m.id)&&STATES.has(m.status));
  requireValue(typeof m.body==='string'&&m.body.trim().length>0&&m.body.length<=2400);

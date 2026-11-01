@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
     private int currentTab;
     private String category;
     private List<String> options = new ArrayList<>();
+    private boolean refreshingSuggestions;
     private final java.util.Map<String,String> credits=new java.util.HashMap<>();
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
@@ -115,9 +116,12 @@ public class MainActivity extends Activity {
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         if (store.settings().enabled) SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
+        renewOptions();
         render();
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
+        CloudConfig cloud=new CloudConfig(this);
+        if(currentTab==0&&cloud.enabled()&&System.currentTimeMillis()-cloud.lastCatalog()>30*60*1000L&&activeEditorDialog==null)freshSuggestions();
     }
 
     @Override protected void onPause() {
@@ -255,6 +259,9 @@ public class MainActivity extends Activity {
         page.addView(body(store.hasCachedCatalog(category)
                 ? "پیشنهادها از بانک پیام‌ها دریافت و روی گوشی ذخیره شده‌اند."
                 : "فعلاً پیشنهادهای آمادهٔ گوشی را می‌بینی؛ بانک پیام‌ها پس از اتصال به سرور به‌روز می‌شود.", 12));
+        CloudConfig catalogState=new CloudConfig(this);
+        if(catalogState.lastCatalog()>0)page.addView(body("آخرین دریافت بانک: "+DateFormat.getDateTimeInstance().format(new Date(catalogState.lastCatalog())),12));
+        if(!catalogState.lastError().isEmpty())page.addView(body(catalogState.lastError(),12));
         if (options.isEmpty()) renewOptions();
         if (options.isEmpty()) page.addView(body("در این دسته فعلاً پیامی موجود نیست؛ دستهٔ دیگری را انتخاب کن یا متن خودت را بنویس.",14));
         int number = 0;
@@ -291,8 +298,22 @@ public class MainActivity extends Activity {
             add(c, actions, 8, 0);
             page.addView(c);
         }
-        page.addView(button("پیشنهادهای تازه", false, () -> { renewOptions(); render(); }));
+        page.addView(button(refreshingSuggestions?"در حال دریافت از سرور…":"پیشنهادهای تازه", false, this::freshSuggestions));
         addPage(button("متن خودم را می‌نویسم", false, () -> editText("")), 10, 0);
+    }
+
+    private void freshSuggestions() {
+        if(refreshingSuggestions)return;
+        CloudConfig cloud=new CloudConfig(this);
+        if(!cloud.enabled()){renewOptions();render();toast("همگام‌سازی خاموش است؛ پیشنهادهای ذخیره‌شده را می‌بینی");return;}
+        refreshingSuggestions=true;cloud.catalogUpdatedReset();render();
+        new Thread(()->{
+            CloudSync.run(getApplicationContext(),new java.util.concurrent.atomic.AtomicBoolean(false));
+            handler.post(()->{refreshingSuggestions=false;if(isFinishing()||isDestroyed())return;
+                if(currentTab==0&&activeEditorDialog==null){renewOptions();render();}
+                toast(new CloudConfig(this).lastCatalog()>0?"پیشنهادها از سرور دریافت شدند":"دریافت کامل نشد؛ اتصال و وضعیت همگام‌سازی را بررسی کن");
+            });
+        },"delneveshte-catalog-refresh").start();
     }
 
     private void renewOptions() {
@@ -608,7 +629,7 @@ public class MainActivity extends Activity {
         if(!cloud.lastError().isEmpty())section.addView(body(cloud.lastError(),13));
         if(cloud.enabled()) {
             section.addView(button("همگام‌سازی با اینترنت",false,()->{
-                CloudScheduler.requestSync(this);toast("با دسترسی به اینترنت، همگام‌سازی شروع می‌شود");
+                freshSuggestions();
             }));
             add(section,button("خاموش‌کردن همگام‌سازی",false,()->{
                 cloud.configure(cloud.baseUrl(),false);CloudScheduler.ensure(this);render();

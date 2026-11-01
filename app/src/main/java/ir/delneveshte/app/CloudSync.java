@@ -25,12 +25,7 @@ public final class CloudSync {
             try {
                 Transport api=new CloudApi(config);
                 api.request("/api/v1/installations/register",new JSONObject().put("app_version",BuildConfig.VERSION_NAME).put("device_hash",config.deviceHash()));
-                long started=System.currentTimeMillis();int batches=0;
-                while(!stopped.get()&&config.enabled()&&config.generation()==generation&&batches++<20&&System.currentTimeMillis()-started<90000) {
-                    if(!uploadBatch(store,api,config,generation))break;
-                }
-                if(stopped.get()||!config.enabled()||config.generation()!=generation)return false;
-                if(System.currentTimeMillis()-config.lastCatalog()>12*60*60*1000L) {
+                if(System.currentTimeMillis()-config.lastCatalog()>30*60*1000L) {
                     for(String category:TextBank.categories()) {
                         if("همه".equals(category))continue;
                         JSONObject response=api.request("/api/v1/messages/suggestions?limit=40&category="+URLEncoder.encode(category,"UTF-8"),null);
@@ -45,6 +40,11 @@ public final class CloudSync {
                     }
                     config.catalogUpdated();
                 }
+                long started=System.currentTimeMillis();int batches=0;
+                while(!stopped.get()&&config.enabled()&&config.generation()==generation&&batches++<20&&System.currentTimeMillis()-started<90000) {
+                    if(!uploadBatch(store,api,config,generation))break;
+                }
+                if(stopped.get()||!config.enabled()||config.generation()!=generation)return false;
                 config.success();return store.pendingSyncCount()>0;
             }catch(CloudApi.Failure error){config.error(error.getMessage());return error.retryable();}
             catch(Exception error){config.error("همگام‌سازی کامل نشد؛ صف گوشی محفوظ است و دوباره تلاش می‌شود.");return true;}

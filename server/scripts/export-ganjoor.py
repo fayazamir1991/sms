@@ -74,7 +74,7 @@ def main():
                 output.write(json.dumps(row,ensure_ascii=False)+'\n');report['selected']+=1
                 if author_counts[author]<2 and len(samples)<60:samples.append(row)
                 author_counts[author]+=1
-        report['by_author']=dict(author_counts);report['review_samples']=samples;report['archive_sha256']=archive_hash.hexdigest();report['manifest_poems']=manifest['PoemsCount'];report['manifest_poets']=manifest['PoetsCount'];report['completed_at_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
+        report['rules_sha256']=hashlib.sha256((Path(__file__).resolve().parents[1]/'data/ganjoor-balanced-rules.json').read_bytes()).hexdigest();report['by_author']=dict(author_counts);report['review_samples']=samples;report['archive_sha256']=archive_hash.hexdigest();report['manifest_poems']=manifest['PoemsCount'];report['manifest_poets']=manifest['PoetsCount'];report['completed_at_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
         report['output_sha256']=hashlib.sha256((out/'ganjoor-v1.ndjson.gz').read_bytes()).hexdigest()
         (out/'ganjoor-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(report,ensure_ascii=False),flush=True)

@@ -108,21 +108,18 @@ public final class TextBank {
         return CATEGORIES.clone();
     }
 
+    /** Complete bundled fallback: enumeration never depends on random sampling. */
+    public static List<String> allSuggestions(String category,String nickname) {
+        String name=nickname==null?"":nickname.trim().replaceAll("\\s+"," ");if(name.isEmpty())name="عزیزم";
+        LinkedHashSet<String> unique=new LinkedHashSet<>();String[] selected=TEXTS.get(category);
+        if(selected!=null){for(String text:selected)unique.add(text.replace("{name}",name));}
+        else for(String[] group:TEXTS.values())for(String text:group)unique.add(text.replace("{name}",name));
+        return new ArrayList<>(unique);
+    }
     /** Returns five distinct choices. A fresh batch may overlap earlier batches. */
-    public static List<String> suggestions(String category, String nickname, Random rng) {
-        String name = nickname == null ? "" : nickname.trim().replaceAll("\\s+", " ");
-        if (name.isEmpty()) name = "عزیزم";
-        LinkedHashSet<String> unique = new LinkedHashSet<>();
-        String[] selected = TEXTS.get(category);
-        if (selected != null) {
-            for (String text : selected) unique.add(text.replace("{name}", name));
-        } else {
-            for (String[] group : TEXTS.values()) {
-                for (String text : group) unique.add(text.replace("{name}", name));
-            }
-        }
-        List<String> candidates = new ArrayList<>(unique);
-        Collections.shuffle(candidates, rng == null ? new Random() : rng);
-        return new ArrayList<>(candidates.subList(0, Math.min(5, candidates.size())));
+    public static List<String> suggestions(String category,String nickname,Random rng) {
+        List<String> candidates=allSuggestions(category,nickname);
+        Collections.shuffle(candidates,rng==null?new Random():rng);
+        return new ArrayList<>(candidates.subList(0,Math.min(5,candidates.size())));
     }
 }

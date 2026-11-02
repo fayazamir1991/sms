@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=28)
+@Config(sdk={28,34})
 public class CatalogBrowsingTest {
     private Context app;
     private AppStore store;
@@ -109,6 +109,43 @@ public class CatalogBrowsingTest {
         for(String q:new String[]{"دلتنگ","دل تنگ","دوستتدارم","توام دوستت","کنارت"})assertEquals(q,java.util.Collections.singletonList(body),store.localCatalogPage("همه",q,0));
         assertTrue(store.localCatalogPage("همه","%",0).isEmpty());assertTrue(store.localCatalogPage("همه","_",0).isEmpty());
         assertTrue(store.localCatalogPage("قدردانی","دلتنگ",0).isEmpty());
+    }
+    @Test public void unusableCachedRowsCannotHideBundledStartupOrCategoryMessages() throws Exception {
+        JSONArray dirty=new JSONArray();
+        for(String category:TextBank.categories())if(!"همه".equals(category)){
+            for(int n=0;n<25;n++)dirty.put(row(n%2==0?"An old English cached message":"دوستت دارم https://example.com/old").put("category",category));
+        }
+        store.rememberCatalog(dirty);
+        try(ActivityController<TestActivity> controller=Robolectric.buildActivity(TestActivity.class).setup()){
+            TestActivity activity=controller.get();View root=activity.getWindow().getDecorView();Pending initial=next();
+            assertEquals(20,options(activity).size());assertNotNull(text(root,"پیام‌ها: ۲۰"));
+            text(root,"شعر").performClick();Pending poetry=next();
+            assertEquals(20,options(activity).size());assertNotNull(text(root,"پیام‌ها: ۲۰"));
+            for(String body:options(activity))assertNotNull(CatalogText.render(body,"عزیزم"));
+            poetry.result.complete(new JSONObject().put("messages",new JSONArray()).put("next_cursor",JSONObject.NULL).put("has_more",false));
+            await(()->text(root,"پیام‌های روی گوشی · شامل بانک آماده و پیام‌های ذخیره‌شده")!=null);
+            assertEquals(20,options(activity).size());
+            initial.result.complete(page("پاسخ قبلی 💕"));
+        }
+    }
+    @Test public void invalidRowsAreSkippedBeforeLocalPageOffsetAndGoodRowsStillFillThePage() throws Exception {
+        JSONArray rows=new JSONArray();
+        for(int n=0;n<30;n++)rows.put(row("Old English cache "+n).put("id",String.format("a%03d",n)));
+        for(int n=0;n<45;n++)rows.put(row("دلم کنار تو آرام است "+n+" 💕").put("id",String.format("b%03d",n)));
+        store.rememberCatalog(rows);
+        List<String> first=store.localCatalogPage("همه","",0),second=store.localCatalogPage("همه","",20);
+        assertEquals(21,first.size());assertEquals(21,second.size());
+        assertTrue(java.util.Collections.disjoint(first.subList(0,20),second.subList(0,20)));
+        assertEquals(5,store.localCatalogPage("همه","",40).size());
+    }
+    @Test public void anEmptyServerPageDoesNotClearInitialBundledMessages() throws Exception {
+        try(ActivityController<TestActivity> controller=Robolectric.buildActivity(TestActivity.class).setup()){
+            TestActivity activity=controller.get();View root=activity.getWindow().getDecorView();Pending request=next();
+            assertEquals(20,options(activity).size());
+            request.result.complete(new JSONObject().put("messages",new JSONArray()).put("next_cursor",JSONObject.NULL).put("has_more",false));
+            await(()->text(root,"پیام‌های روی گوشی · شامل بانک آماده و پیام‌های ذخیره‌شده")!=null);
+            assertEquals(20,options(activity).size());assertNotNull(text(root,"پیام‌ها: ۲۰"));
+        }
     }
     @Test public void knownRegistrationIsReusedAndServerResetRetriesOnce() throws Exception {
         CloudConfig config=new CloudConfig(app);List<String> calls=new ArrayList<>();

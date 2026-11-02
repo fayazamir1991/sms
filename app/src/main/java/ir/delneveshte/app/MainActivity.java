@@ -126,7 +126,7 @@ public class MainActivity extends Activity {
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         if (store.settings().enabled) SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
-        if(options.isEmpty())renewOptions();
+        if(options.isEmpty()&&(!catalogRequested||usingOfflineCatalog))renewOptions();
         render();
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
             chip.setMinHeight(dp(44));
             chip.setPadding(dp(17), dp(8), dp(17), dp(8));
             chip.setBackground(ripple(option.equals(category) ? ROSE : Color.WHITE, 22));
-            chip.setOnClickListener(v -> { category = option; render();freshSuggestions(); });
+            chip.setOnClickListener(v -> { category = option; freshSuggestions();render(); });
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
             cp.setMarginEnd(dp(8));
             chips.addView(chip, cp);
@@ -283,11 +283,11 @@ public class MainActivity extends Activity {
     private void renderCatalogResults(){
         if(currentTab!=0||catalogResults==null)return;
         LinearLayout target=catalogResults;target.removeAllViews();
-        if(refreshingSuggestions)target.addView(body("در حال به‌روزرسانی از سرور… پیام‌های ذخیره‌شده در دسترس‌اند.",12));
-        else if(usingOfflineCatalog)target.addView(body("پیام‌های ذخیره‌شده · جست‌وجو در بانک روی گوشی",12));
+        if(refreshingSuggestions)target.addView(body("در حال به‌روزرسانی از سرور… پیام‌های روی گوشی در دسترس‌اند.",12));
+        else if(usingOfflineCatalog)target.addView(body("پیام‌های روی گوشی · شامل بانک آماده و پیام‌های ذخیره‌شده",12));
         target.addView(label("پیام‌ها: "+fa(options.size()),12,MUTED,false));
         if (options.isEmpty()) target.addView(body(refreshingSuggestions?"در حال دریافت پیام‌ها…":"پیامی پیدا نشد؛ عبارت یا دستهٔ دیگری را امتحان کن.",14));
-        if(options.isEmpty()&&!catalogQuery.isEmpty()&&!"همه".equals(category))target.addView(button("جست‌وجو در همهٔ دسته‌ها",false,()->{category="همه";render();freshSuggestions();}));
+        if(options.isEmpty()&&!catalogQuery.isEmpty()&&!"همه".equals(category))target.addView(button("جست‌وجو در همهٔ دسته‌ها",false,()->{category="همه";freshSuggestions();render();}));
         int number = 0;
         for (String text : options) {
             LinearLayout c = card(Color.WHITE);
@@ -360,9 +360,18 @@ public class MainActivity extends Activity {
                 if(error==null&&data!=null){
                     usingOfflineCatalog=false;
                     try{
-                        if(reset){options.clear();credits.clear();}
-                        org.json.JSONArray rows=data.getJSONArray("messages");for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
-                        catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);catalogHasMore=data.optBoolean("has_more",false);cloud.catalogUpdated();
+                        org.json.JSONArray rows=data.getJSONArray("messages");
+                        boolean usable=false;for(int i=0;i<rows.length();i++)if(CatalogText.render(rows.getJSONObject(i).getString("body"),catalogNickname())!=null){usable=true;break;}
+                        if(usable||!catalogQuery.isEmpty()){
+                            if(reset){options.clear();credits.clear();}
+                            for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
+                            catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);catalogHasMore=data.optBoolean("has_more",false);
+                        }else{
+                            usingOfflineCatalog=true;
+                            if(options.isEmpty())renewOptions();
+                            cloud.error("سرور فعلاً پیام قابل‌نمایشی ندارد؛ پیام‌های آماده روی گوشی در دسترس‌اند.");
+                        }
+                        cloud.catalogUpdated();
                     }catch(Exception ignored){cloud.error("پاسخ جست‌وجو معتبر نیست.");}
                 }else{cloud.error(error);if(reset&&options.isEmpty()){usingOfflineCatalog=true;renewOptions();}toast(error);}
                 renderCatalogResults();
@@ -370,20 +379,23 @@ public class MainActivity extends Activity {
         },"delneveshte-catalog-browse").start();
     }
     CloudSync.Transport catalogTransport(CloudConfig cloud){return new CloudApi(cloud);}
+    private String catalogNickname(){return draft==null?"عزیزم":draft.nickname;}
     private void appendOption(String raw){
-        String[] parts=raw.split("\\n—",2);String text=parts[0].trim().replace("{name}",draft==null||draft.nickname.trim().isEmpty()?"عزیزم":draft.nickname.trim());
-        if(text.matches("(?s).*https?://.*")||text.matches("(?s).*[A-Za-z]{3,}.*")||options.contains(text))return;
+        String text=CatalogText.render(raw,catalogNickname());if(text==null||options.contains(text))return;
+        String[] parts=raw.split("\\n—",2);
         credits.put(text,parts.length>1?"شاعر: "+parts[1]:store.catalogCredit(raw));options.add(text);
     }
     private java.util.List<String> offlinePool(){
-        java.util.LinkedHashSet<String> all=new java.util.LinkedHashSet<>();
-        java.util.Random fixed=new java.util.Random(7);
-        for(int i=0;i<100;i++)all.addAll(TextBank.suggestions(category,draft==null?"عزیزم":draft.nickname,fixed));
-        java.util.List<String> result=new ArrayList<>();for(String text:all)if(CatalogSearch.matches(text,catalogQuery))result.add(text);return result;
+        java.util.List<String> result=new ArrayList<>();
+        for(String raw:TextBank.allSuggestions(category,catalogNickname())){
+            String rendered=CatalogText.render(raw,catalogNickname());
+            if(rendered!=null&&CatalogSearch.matches(rendered,catalogQuery))result.add(raw);
+        }
+        return result;
     }
     private void appendLocalPage(){
-        java.util.List<String> rows=store.localCatalogPage(category,catalogQuery,localCatalogOffset);
-        if(store.localCatalogPage(category,catalogQuery,0).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
+        java.util.List<String> rows=store.localCatalogPage(category,catalogQuery,localCatalogOffset,catalogNickname());
+        if(store.localCatalogPage(category,catalogQuery,0,catalogNickname()).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
         catalogHasMore=rows.size()>20;
         for(int i=0;i<Math.min(20,rows.size());i++)appendOption(rows.get(i));localCatalogOffset+=20;
     }

@@ -242,13 +242,16 @@ public final class AppStore {
             }db.setTransactionSuccessful();
         }finally{db.endTransaction();}}
     }
-    public List<String> localCatalogPage(String category,String query,int offset){
+    public List<String> localCatalogPage(String category,String query,int offset){return localCatalogPage(category,query,offset,"عزیزم");}
+    public List<String> localCatalogPage(String category,String query,int offset,String nickname){
         synchronized(LOCK){List<String> out=new ArrayList<>();List<String> args=new ArrayList<>();
             String where="1=1";
             if(!"همه".equals(category)){where+=" AND category=?";args.add(category);}
             String key=CatalogSearch.key(query);int skipped=0;
             try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache WHERE "+where+" ORDER BY id",args.toArray(new String[0]))){
-                while(c.moveToNext())if(CatalogSearch.key(c.getString(0)).contains(key)){
+                while(c.moveToNext()){
+                    String rendered=CatalogText.render(c.getString(0),nickname);
+                    if(rendered==null||!CatalogSearch.key(rendered).contains(key))continue;
                     if(skipped++<Math.max(0,offset))continue;
                     out.add(c.getString(0));if(out.size()==21)break;
                 }

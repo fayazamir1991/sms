@@ -11,3 +11,5 @@ The owner selected light violet and primrose (latest pastel comparison, option 2
 In 0.14.0, non-square SVG viewports are padded to a centered square instead of being stretched into a 24dp square. Source viewports and padded Android viewports are recorded in manifest.json; original SVGs remain unchanged. Icon buttons use CENTER_INSIDE and square 48dp or larger touch targets.
 
 Version 0.15 adds Free Solid trash-can for the compact queue. The original paths are padded on a square viewport, including their small source glyph overshoot.
+
+Version 0.16 uses a 20dp intrinsic canvas for context menus and a compact 18dp canvas in card controls. SVG paths and aspect ratios stay unchanged; the 48dp touch targets are independent of icon size.

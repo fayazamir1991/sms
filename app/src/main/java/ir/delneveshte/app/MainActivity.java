@@ -188,7 +188,7 @@ public class MainActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         page = vertical();
-        page.setPadding(0,dp(8),0,dp(currentTab==0?168:104));
+        page.setPadding(0,dp(4),0,dp(currentTab==0?72:16));
         scroll.addView(page);
         FrameLayout content=new FrameLayout(this);content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         content.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
@@ -199,66 +199,66 @@ public class MainActivity extends Activity {
         else settingsPage();
         if(currentTab==0){
             ImageButton compose=compactAction("نوشتن پیام",R.drawable.ic_compose,()->editText(""));
-            compose.setBackground(ripple(ACCENT,28));compose.setColorFilter(Color.WHITE);compose.setElevation(dp(5));compose.setPadding(dp(16),dp(16),dp(16),dp(16));
-            FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(56),dp(56),Gravity.BOTTOM|Gravity.END);fp.setMargins(dp(16),dp(16),dp(16),dp(96));content.addView(compose,fp);
+            compose.setBackground(iconBackground(ACCENT,UiMetrics.COMPOSE_SURFACE));compose.setColorFilter(Color.WHITE);compose.setElevation(dp(2));compose.setPadding(dp(14),dp(14),dp(14),dp(14));
+            FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH),Gravity.BOTTOM|Gravity.END);fp.setMargins(dp(12),dp(12),dp(12),dp(12));content.addView(compose,fp);
         }
-        FrameLayout shell=new FrameLayout(this);shell.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);shell.setBackgroundColor(BG);shell.addView(root,new FrameLayout.LayoutParams(-1,-1));
-        FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);np.setMargins(dp(12),0,dp(12),dp(12));shell.addView(navigation(),np);
-        setContentView(shell);
+        root.addView(navigation(),new LinearLayout.LayoutParams(-1,-2));
+        setContentView(root);
     }
 
     private View appHeader(){
         if(currentTab==4)return searchToolbar();
-        LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(18),0,dp(12),0);bar.setMinimumHeight(dp(64));
-        ImageView brand=new ImageView(this);brand.setScaleType(ImageView.ScaleType.CENTER_INSIDE);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.COMPLEMENT_INK);brand.setBackground(shape(AppThemeTokens.SOFT_COMPLEMENT,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
+        LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(16),0,dp(8),0);bar.setMinimumHeight(dp(56));
+        ImageView brand=new ImageView(this);brand.setScaleType(ImageView.ScaleType.CENTER_INSIDE);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.COMPLEMENT_INK);brand.setBackground(shape(AppThemeTokens.SOFT_COMPLEMENT,14,0));brand.setPadding(dp(6),dp(6),dp(6),dp(6));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(28),dp(28));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
         LinearLayout title=vertical();String name=currentTab==0?"دل‌نوشته":currentTab==1?"صف ارسال":currentTab==2?"سابقه":"تنظیمات";
-        title.addView(label(name,21,INK,true));
+        title.addView(label(name,20,INK,true));
         boolean active=store.settings().enabled;String status=active?"ارسال فعال":"ارسال متوقف";
         title.addView(label(status,12,MUTED,false));bar.addView(title,new LinearLayout.LayoutParams(0,-2,1));
         title.setContentDescription(active?"ارسال خودکار فعال است":"ارسال خودکار متوقف است");title.setOnClickListener(v->selectTab(3));
-        if(currentTab!=3){ImageButton search=toolbarAction("جست‌وجو",R.drawable.ic_search,()->selectTab(4));bar.addView(search,new LinearLayout.LayoutParams(dp(48),dp(48)));}
+        if(currentTab!=3){ImageButton search=toolbarAction("جست‌وجو",R.drawable.ic_search,()->selectTab(4));bar.addView(search,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));}
         return bar;
     }
     private ImageButton toolbarAction(String description,int icon,Runnable action){
-        ImageButton button=compactAction(description,icon,action);button.setColorFilter(ACCENT);button.setBackground(ripple(PALE,24));return button;
+        ImageButton button=compactAction(description,icon,action);button.setColorFilter(ACCENT);button.setBackground(iconBackground(Color.TRANSPARENT,UiMetrics.ICON_SURFACE));return button;
     }
     private View searchToolbar(){
-        LinearLayout bar=horizontal();bar.setMinimumHeight(dp(64));bar.setPadding(dp(12),dp(4),dp(12),dp(4));bar.setBackgroundColor(BG);
-        bar.addView(toolbarAction("بازگشت به پیشنهادها",R.drawable.ic_back,()->selectTab(0)),new LinearLayout.LayoutParams(dp(48),dp(48)));
-        EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(18);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackground(shape(Color.WHITE,22,LINE));search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(12),0,dp(12),0);search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
+        LinearLayout bar=horizontal();bar.setMinimumHeight(dp(56));bar.setPadding(dp(8),dp(2),dp(12),dp(2));bar.setBackgroundColor(BG);
+        bar.addView(toolbarAction("بازگشت به پیشنهادها",R.drawable.ic_back,()->selectTab(0)),new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));
+        LinearLayout field=horizontal();field.setMinimumHeight(dp(UiMetrics.TOUCH));field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,LINE));
+        EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(16);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackgroundColor(Color.TRANSPARENT);search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(10),dp(4),dp(4),dp(4));search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setPadding(dp(15),dp(15),dp(15),dp(15));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
         watch(search,value->{
             catalogSearchDraft=value;catalogQuery=value.trim();catalogNetworkFailed=false;clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
             handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
         });
+        search.setOnFocusChangeListener((v,focused)->field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,focused?ACCENT:LINE)));
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
-        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(0,dp(48),1);inputParams.setMargins(dp(8),0,dp(8),0);bar.addView(search,inputParams);bar.addView(clear,new LinearLayout.LayoutParams(dp(48),dp(48)));return bar;
+        field.addView(search,new LinearLayout.LayoutParams(0,-2,1));field.addView(clear,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(0,-2,1);fp.setMarginStart(dp(4));bar.addView(field,fp);return bar;
     }
     private View categoryTabs(){
-        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setBackgroundColor(BG);scroll.setHorizontalScrollBarEnabled(false);scroll.setPadding(dp(12),dp(2),dp(12),dp(8));scroll.setClipToPadding(false);LinearLayout tabs=horizontal();
+        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setBackgroundColor(BG);scroll.setHorizontalScrollBarEnabled(false);scroll.setPadding(dp(12),0,dp(12),0);scroll.setClipToPadding(false);LinearLayout tabs=horizontal();
         for(String option:TextBank.categories()){
-            boolean selected=option.equals(category);TextView text=label(option,13,selected?Color.WHITE:MUTED,true);text.setGravity(Gravity.CENTER);text.setMinHeight(dp(48));text.setPadding(dp(16),dp(9),dp(16),dp(9));text.setBackground(ripple(selected?ACCENT:Color.WHITE,24));
-            text.setOnClickListener(v->{category=option;freshSuggestions();render();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,dp(48));cp.setMarginEnd(dp(6));tabs.addView(text,cp);
+            boolean selected=option.equals(category);TextView text=label(option,13,selected?Color.WHITE:MUTED,true);text.setGravity(Gravity.CENTER);text.setMinHeight(dp(UiMetrics.TOUCH));text.setPadding(dp(12),dp(8),dp(12),dp(8));text.setBackground(controlBackground(selected?ACCENT:Color.TRANSPARENT,16,UiMetrics.CHIP_INSET,selected?0:LINE));text.setSelected(selected);
+            text.setOnClickListener(v->{category=option;freshSuggestions();render();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.setMarginEnd(dp(6));tabs.addView(text,cp);
         }
         scroll.addView(tabs);return scroll;
     }
 
     private View navigation() {
-        LinearLayout nav = horizontal();
-        nav.setBackground(shape(0xf2ffffff,30,LINE));
-        nav.setPadding(dp(6),dp(6),dp(6),dp(6));
-        nav.setElevation(dp(4));
+        LinearLayout container=vertical();container.setBackgroundColor(Color.WHITE);
+        View line=new View(this);line.setBackgroundColor(LINE);container.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+        LinearLayout nav=horizontal();nav.setPadding(dp(8),dp(2),dp(8),dp(2));
         String[] titles={"پیشنهادها","جست‌وجو","صف ارسال","سابقه","تنظیمات"};
         int[] tabs={0,4,1,2,3};int[] icons={R.drawable.ic_home,R.drawable.ic_search,R.drawable.ic_queue,R.drawable.ic_history,R.drawable.ic_settings};
         for(int i=0;i<titles.length;i++){
             final int tab=tabs[i];boolean selected=currentTab==tab;
-            LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(54));item.setPadding(0,dp(4),0,dp(4));
-            ImageView icon=new ImageView(this);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ACCENT:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
-            TextView title=label(titles[i],11,selected?ACCENT:MUTED,selected);title.setGravity(Gravity.CENTER);item.addView(title);title.setOnClickListener(v->selectTab(tab));
-            item.setBackground(ripple(selected?PALE:Color.TRANSPARENT,24));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));
-            nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
+            LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(52));item.setPadding(0,dp(4),0,dp(4));item.setSelected(selected);
+            FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(selected?PALE:Color.TRANSPARENT,12,0));
+            ImageView icon=new ImageView(this);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(icons[i]);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);badge.addView(icon,new FrameLayout.LayoutParams(dp(UiMetrics.ICON),dp(UiMetrics.ICON),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(36),dp(28)));
+            TextView title=label(titles[i],12,selected?ACCENT:MUTED,selected);title.setGravity(Gravity.CENTER);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(title,lp);title.setOnClickListener(v->selectTab(tab));
+            item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
         }
-        return nav;
+        container.addView(nav);return container;
     }
 
     private void selectTab(int tab){
@@ -269,14 +269,14 @@ public class MainActivity extends Activity {
 
     private ImageButton compactAction(String description,int icon,Runnable action){
         ImageButton button=new ImageButton(this);button.setImageResource(icon);button.setColorFilter(ACCENT);
-        button.setContentDescription(description);button.setBackground(ripple(PALE,24));button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);button.setAdjustViewBounds(false);button.setMinimumWidth(dp(48));button.setMinimumHeight(dp(48));button.setPadding(dp(12),dp(12),dp(12),dp(12));
+        button.setContentDescription(description);button.setBackground(iconBackground(PALE,UiMetrics.ICON_SURFACE));button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);button.setAdjustViewBounds(false);button.setMinimumWidth(dp(UiMetrics.TOUCH));button.setMinimumHeight(dp(UiMetrics.TOUCH));button.setPadding(dp(15),dp(15),dp(15),dp(15));
         button.setOnClickListener(v->action.run());return button;
     }
     private void suggestionsPage(){
         catalogResults=vertical();page.addView(catalogResults,match());renderCatalogResults();
     }
     private LinearLayout messageCard(){
-        LinearLayout view=vertical();view.setPadding(dp(16),dp(14),dp(16),dp(8));view.setBackground(shape(Color.WHITE,20,LINE));view.setElevation(dp(0));
+        LinearLayout view=vertical();view.setPadding(dp(14),dp(10),dp(14),dp(4));view.setBackground(shape(Color.WHITE,UiMetrics.CARD_RADIUS,LINE));view.setElevation(dp(0));
         LinearLayout.LayoutParams lp=match();lp.setMargins(dp(12),0,dp(12),dp(8));view.setLayoutParams(lp);return view;
     }
 
@@ -290,7 +290,7 @@ public class MainActivity extends Activity {
         if(options.isEmpty())target.addView(body(refreshingSuggestions?"در حال جست‌وجو…":"پیامی پیدا نشد.",14));
         if(options.isEmpty()&&!refreshingSuggestions&&catalogNetworkFailed&&currentTab==4)target.addView(body("برای جست‌وجو در کل بانک، اتصال به سرور را بررسی کن.",13));
         for(String text:options){
-            LinearLayout c=messageCard();TextView message=body(text,17);message.setPadding(0,dp(2),0,dp(4));
+            LinearLayout c=messageCard();TextView message=body(text,16);message.setPadding(0,0,0,dp(2));
             message.setOnClickListener(v->messageMenu(c,text));message.setOnLongClickListener(v->{messageMenu(c,text);return true;});
             c.setOnClickListener(v->messageMenu(c,text));c.setOnLongClickListener(v->{messageMenu(c,text);return true;});c.addView(message);
             LinearLayout actions=horizontal();actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
@@ -298,8 +298,8 @@ public class MainActivity extends Activity {
                 if(sessionEnqueued.contains(text)){toast("این پیام در صف است.");return;}
                 if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
-            random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(48),dp(48)));
-            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.COMPLEMENT_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_COMPLEMENT,24));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(48),dp(48));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
+            random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.COMPLEMENT_INK);fixed.setBackground(iconBackground(AppThemeTokens.SOFT_COMPLEMENT,UiMetrics.ICON_SURFACE));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH));fp.setMarginStart(dp(2));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
     }
@@ -433,7 +433,7 @@ public class MainActivity extends Activity {
         Runnable update=()->{
             java.time.LocalDate day=java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalDate(),current=java.time.LocalDate.now(zone);
             int active=day.equals(current)?0:day.equals(current.plusDays(1))?1:2;
-            for(int i=0;i<dates.length;i++){dates[i].setSelected(i==active);dates[i].setBackground(ripple(i==active?ACCENT:PALE,14));dates[i].setTextColor(i==active?Color.WHITE:AppThemeTokens.ACCENT_INK);}
+            for(int i=0;i<dates.length;i++){dates[i].setSelected(i==active);dates[i].setBackground(controlBackground(i==active?ACCENT:Color.WHITE,10,UiMetrics.BUTTON_INSET,i==active?0:LINE));dates[i].setTextColor(i==active?Color.WHITE:AppThemeTokens.ACCENT_INK);}
             chosenDate.setText(PersianDates.solar(day,zone));clock.setText("ساعت: "+PersianDates.clock(at[0],zone));summary.setText("زمان ارسال: "+formatDate(at[0]));
         };
         java.util.function.Consumer<java.time.LocalDate> choose=day->{java.time.LocalTime hour=java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalTime();at[0]=day.atTime(hour).atZone(zone).toInstant().toEpochMilli();update.run();};
@@ -458,7 +458,7 @@ public class MainActivity extends Activity {
         java.time.LocalDate[] selected={initial.isBefore(minimum)?minimum:initial};int[] month=PersianDates.fields(selected[0],zone);
         LinearLayout content=dialogContent(),header=horizontal(),grid=vertical();
         ImageButton previous=toolbarAction("ماه قبل",R.drawable.ic_back,()->{}),next=toolbarAction("ماه بعد",R.drawable.ic_back,()->{});next.setRotation(180);
-        Button title=button("",false,()->{});header.addView(previous,new LinearLayout.LayoutParams(dp(48),dp(48)));LinearLayout.LayoutParams tp=weighted();tp.setMargins(dp(6),0,dp(6),0);header.addView(title,tp);header.addView(next,new LinearLayout.LayoutParams(dp(48),dp(48)));content.addView(header);
+        Button title=button("",false,()->{});header.addView(previous,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));LinearLayout.LayoutParams tp=weighted();tp.setMargins(dp(6),0,dp(6),0);header.addView(title,tp);header.addView(next,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));content.addView(header);
         TextView selection=body("",13);content.addView(selection);content.addView(grid);
         AlertDialog picker=new AlertDialog.Builder(this).setTitle("انتخاب تاریخ خورشیدی").setView(scrollDialog(content)).setPositiveButton("انتخاب تاریخ",null).setNegativeButton("انصراف",null).create();
         Runnable[] draw=new Runnable[1];draw[0]=()->{
@@ -469,9 +469,9 @@ public class MainActivity extends Activity {
             for(int i=0;i<7;i++){TextView day=label(shortNames[i],12,MUTED,true);day.setContentDescription(names[i]);day.setGravity(Gravity.CENTER);week.addView(day,new LinearLayout.LayoutParams(0,dp(32),1));}grid.addView(week);
             for(int start=0;start<offset+length;start+=7){LinearLayout row=horizontal();
                 for(int col=0;col<7;col++){int number=start+col-offset+1;
-                    if(number<1||number>length){row.addView(new View(this),new LinearLayout.LayoutParams(0,dp(48),1));continue;}
+                    if(number<1||number>length){row.addView(new View(this),new LinearLayout.LayoutParams(0,dp(UiMetrics.TOUCH),1));continue;}
                     java.time.LocalDate date=PersianDates.date(month[0],month[1],number,zone);boolean active=date.equals(selected[0]);
-                    Button cell=button(PersianDates.digits(number),active,()->{selected[0]=date;draw[0].run();});cell.setPadding(0,dp(6),0,dp(6));cell.setMinWidth(0);cell.setMinimumWidth(0);cell.setSelected(active);cell.setContentDescription(PersianDates.solar(date,zone));cell.setEnabled(!date.isBefore(java.time.LocalDate.now(zone)));cell.setAlpha(cell.isEnabled()?1f:.30f);row.addView(cell,new LinearLayout.LayoutParams(0,dp(48),1));
+                    Button cell=button(PersianDates.digits(number),active,()->{selected[0]=date;draw[0].run();});cell.setPadding(0,dp(6),0,dp(6));cell.setBackground(iconBackground(active?ACCENT:Color.TRANSPARENT,UiMetrics.ICON_SURFACE));cell.setMinWidth(0);cell.setMinimumWidth(0);cell.setSelected(active);cell.setContentDescription(PersianDates.solar(date,zone));cell.setEnabled(!date.isBefore(java.time.LocalDate.now(zone)));cell.setAlpha(cell.isEnabled()?1f:.30f);row.addView(cell,new LinearLayout.LayoutParams(0,-2,1));
                 }grid.addView(row);
             }
         };
@@ -550,12 +550,12 @@ public class MainActivity extends Activity {
         for (Message message : queue) {
             LinearLayout c = messageCard();
             c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0?"زمان تصادفی: "+formatDate(message.plannedAt):"تنظیمات زمان‌بندی را کامل کن",12,ACCENT,true));
-            TextView messageText=body(message.body,17);
+            TextView messageText=body(message.body,16);
             c.setOnClickListener(v->queueMessageMenu(c,message));c.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});c.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
             messageText.setOnClickListener(v->queueMessageMenu(c,message));messageText.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});messageText.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
             c.addView(messageText);
             LinearLayout actions=horizontal();actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
-            ImageButton remove=compactAction("حذف از صف",R.drawable.ic_delete,()->cancelMessage(message));actions.addView(remove,new LinearLayout.LayoutParams(dp(48),dp(48)));c.addView(actions);
+            ImageButton remove=compactAction("حذف از صف",R.drawable.ic_delete,()->cancelMessage(message));actions.addView(remove,new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));c.addView(actions);
             page.addView(c);
         }
     }
@@ -672,7 +672,7 @@ public class MainActivity extends Activity {
         watch(phone, value -> draft.recipient = asciiDigits(value).replace(" ", ""));
         destination.addView(phone, match());
         destination.addView(fieldTitle("سیم‌کارت ارسال‌کننده"));
-        destination.addView(button(simLabel(draft.subscriptionId) + "  ›", false, this::showSimPicker));
+        destination.addView(actionButton(simLabel(draft.subscriptionId),R.drawable.ic_settings,false,this::showSimPicker));
         destination.addView(body("شماره و سیم‌کارت هر پیام هنگام تأیید آن ذخیره می‌شوند. تغییر تنظیمات، مقصد پیام‌های قبلی را عوض نمی‌کند.", 12));
         page.addView(destination);
 
@@ -704,7 +704,7 @@ public class MainActivity extends Activity {
             String readiness = SmsRuntime.readiness(this);
             if (readiness != null && !readiness.isEmpty()) control.addView(body(readiness, 14));
         }
-        control.addView(button(active ? "توقف ارسال خودکار" : "فعال‌کردن ارسال خودکار", true, () -> {
+        control.addView(settingsLink(active ? "توقف ارسال خودکار" : "فعال‌کردن ارسال خودکار",R.drawable.ic_send, () -> {
             if (store.settings().enabled) {
                 SmsRuntime.pause(this);
                 store.requeueFuture();
@@ -720,11 +720,11 @@ public class MainActivity extends Activity {
         permissions.addView(body((SmsRuntime.hasSendPermission(this) ? "✓" : "○") + "  اجازهٔ ارسال پیامک\n"
                 + (SmsRuntime.hasSimPermission(this) ? "✓" : "○") + "  دسترسی برای انتخاب سیم‌کارت", 14));
         if (!SmsRuntime.hasSendPermission(this))
-            permissions.addView(button("اجازهٔ ارسال پیامک", false, this::explainSmsPermission));
+            permissions.addView(settingsLink("اجازهٔ ارسال پیامک",R.drawable.ic_send,this::explainSmsPermission));
         if (!SmsRuntime.hasSimPermission(this))
-            add(permissions, button("اجازهٔ انتخاب سیم‌کارت", false, this::explainSimPermission), 8, 0);
+            add(permissions, settingsLink("اجازهٔ انتخاب سیم‌کارت",R.drawable.ic_settings,this::explainSimPermission), 8, 0);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            add(permissions, button("فعال‌کردن اعلان‌ها (اختیاری)", false,
+            add(permissions, settingsLink("فعال‌کردن اعلان‌ها (اختیاری)",R.drawable.ic_info,
                     () -> requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATIONS)), 8, 0);
         }
         permissions.addView(body("این اپ برای کار خودش نیازی به خواندن پیامک‌های شخصی تو ندارد.", 12));
@@ -733,12 +733,12 @@ public class MainActivity extends Activity {
         LinearLayout phoneHelp = card(Color.WHITE);
         phoneHelp.addView(label("اجرای پس‌زمینه و باتری",17,INK,true));
         phoneHelp.addView(body("برای اجرای زمان‌بندی، اجازهٔ فعالیت پس‌زمینهٔ دل‌نوشته را بررسی کن و محدودیت مصرف باتری برنامه را بردار. بعضی گوشی‌ها گزینهٔ «شروع خودکار» هم دارند. نام و مسیر این گزینه‌ها بسته به سازنده و نسخهٔ اندروید متفاوت است.",14));
-        phoneHelp.addView(button("تنظیمات برنامه",false,this::openAppSettings));
-        add(phoneHelp,button("تنظیم مصرف باتری",false,this::openBatterySettings),8,0);
+        phoneHelp.addView(settingsLink("تنظیمات برنامه",R.drawable.ic_settings,this::openAppSettings));
+        add(phoneHelp,settingsLink("تنظیم مصرف باتری",R.drawable.ic_clock,this::openBatterySettings),8,0);
         phoneHelp.addView(body("پیامک‌ها از سیم‌کارت انتخابی ارسال می‌شوند. برای دیدن آن‌ها، پیام‌رسان پیش‌فرض گوشی را بررسی کن؛ می‌توانی از Google Messages یا پیام‌رسان گوشی استفاده کنی.",13));
-        add(phoneHelp,button("پیام‌رسان پیش‌فرض",false,()->openSystem(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))),8,0);
+        add(phoneHelp,settingsLink("پیام‌رسان پیش‌فرض",R.drawable.ic_home,()->openSystem(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))),8,0);
         page.addView(phoneHelp);
-        addPage(button("درباره و مجوزها",false,this::showLicenses),0,8);
+        addPage(settingsLink("درباره و مجوزها",R.drawable.ic_info,this::showLicenses),0,8);
         addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "", 12), 0, 0);
     }
 
@@ -950,10 +950,10 @@ public class MainActivity extends Activity {
 
     private void empty(String title, String text, String action, Runnable task) {
         LinearLayout c = card(Color.WHITE);
-        TextView icon = label("♡", 48, ACCENT, false);
+        TextView icon = label("♡", 32, ACCENT, false);
         icon.setGravity(Gravity.CENTER);
         c.addView(icon);
-        TextView t = label(title, 18, INK, true);
+        TextView t = label(title, 17, INK, true);
         t.setGravity(Gravity.CENTER);
         c.addView(t);
         TextView b = body(text, 14);
@@ -965,7 +965,7 @@ public class MainActivity extends Activity {
 
     private TextView fieldTitle(String title) {
         TextView view = label(title, 13, MUTED, true);
-        view.setTextColor(AppThemeTokens.ACCENT_INK);view.setPadding(0,dp(16),0,dp(6));
+        view.setTextColor(AppThemeTokens.ACCENT_INK);view.setPadding(0,dp(10),0,dp(4));
         return view;
     }
 
@@ -996,10 +996,10 @@ public class MainActivity extends Activity {
 
     private LinearLayout card(int color) {
         LinearLayout view = vertical();
-        view.setPadding(dp(16),dp(14),dp(16),dp(14));
-        view.setBackground(shape(color,18,0));
+        view.setPadding(dp(14),dp(12),dp(14),dp(12));
+        view.setBackground(shape(color,UiMetrics.CARD_RADIUS,0));
         LinearLayout.LayoutParams lp = match();
-        lp.bottomMargin = dp(16);
+        lp.bottomMargin = dp(12);
         view.setLayoutParams(lp);
         return view;
     }
@@ -1018,8 +1018,8 @@ public class MainActivity extends Activity {
 
     private TextView body(String text, int size) {
         TextView view = label(text,size,size>=16?INK:MUTED,false);
-        view.setLineSpacing(dp(2),1.10f);
-        view.setPadding(0, dp(8), 0, dp(8));
+        view.setLineSpacing(dp(1),1.12f);
+        view.setPadding(0, dp(6), 0, dp(6));
         return view;
     }
 
@@ -1028,12 +1028,13 @@ public class MainActivity extends Activity {
         view.setText(title);
         view.setTextSize(14);
         view.setAllCaps(false);
+        view.setSingleLine(false);view.setMaxLines(Integer.MAX_VALUE);view.setEllipsize(null);
         view.setTypeface(mediumFont);
         view.setTextColor(primary ? Color.WHITE : AppThemeTokens.ACCENT_INK);
-        view.setMinHeight(dp(50));
-        view.setMinimumHeight(dp(50));
-        view.setPadding(dp(12), dp(10), dp(12), dp(10));
-        view.setBackground(ripple(primary?ACCENT:PALE,14));
+        view.setMinHeight(dp(UiMetrics.TOUCH));
+        view.setMinimumHeight(dp(UiMetrics.TOUCH));
+        view.setPadding(dp(12), dp(8), dp(12), dp(8));
+        view.setBackground(controlBackground(primary?ACCENT:Color.TRANSPARENT,10,UiMetrics.BUTTON_INSET,primary?0:LINE));
         view.setStateListAnimator(null);
         view.setContentDescription(title);
         view.setLayoutParams(match());
@@ -1047,10 +1048,14 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    private Button settingsLink(String title,int icon,Runnable action){
+        Button row=actionButton(title,icon,false,action);row.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);row.setBackground(controlBackground(Color.TRANSPARENT,8,UiMetrics.BUTTON_INSET,0));row.setPadding(dp(4),dp(8),dp(4),dp(8));row.setCompoundDrawablePadding(dp(10));return row;
+    }
+
     private void setButtonIcon(Button view, int icon, int color) {
         android.graphics.drawable.Drawable drawable = getDrawable(icon).mutate();
         drawable.setTint(color);
-        drawable.setBounds(0, 0, dp(20), dp(20));
+        drawable.setBounds(0, 0, dp(UiMetrics.CARD_ICON), dp(UiMetrics.CARD_ICON));
         view.setCompoundDrawablesRelative(drawable, null, null, null);
         view.setCompoundDrawablePadding(dp(6));
     }
@@ -1065,8 +1070,8 @@ public class MainActivity extends Activity {
         view.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
         view.setGravity(Gravity.RIGHT | Gravity.TOP);
         android.graphics.drawable.StateListDrawable fieldBackground=new android.graphics.drawable.StateListDrawable();fieldBackground.addState(new int[]{android.R.attr.state_focused},shape(Color.WHITE,12,ACCENT));fieldBackground.addState(new int[]{},shape(BG,12,LINE));view.setBackground(fieldBackground);
-        view.setPadding(dp(14), dp(12), dp(14), dp(12));
-        view.setMinHeight(dp(50));
+        view.setPadding(dp(12), dp(10), dp(12), dp(10));
+        view.setMinHeight(dp(UiMetrics.TOUCH));
         view.setHint(hint);
         view.setText(text == null ? "" : text);
         view.setContentDescription(hint);
@@ -1094,7 +1099,7 @@ public class MainActivity extends Activity {
 
     private LinearLayout dialogContent() {
         LinearLayout layout = vertical();
-        layout.setPadding(dp(24), dp(10), dp(24), dp(8));
+        layout.setPadding(dp(20), dp(8), dp(20), dp(8));
         return layout;
     }
 
@@ -1111,6 +1116,20 @@ public class MainActivity extends Activity {
         drawable.setCornerRadius(dp(radius));
         if (border != 0) drawable.setStroke(dp(1), border);
         return drawable;
+    }
+
+    /** The visible surface is inset; the full View remains the non-overlapping touch target. */
+    private RippleDrawable controlBackground(int color,int radius,int verticalInset,int border){
+        android.graphics.drawable.InsetDrawable content=new android.graphics.drawable.InsetDrawable(shape(color==ACCENT?AppThemeTokens.ACTION_FILL:color,radius,border),0,dp(verticalInset),0,dp(verticalInset));
+        android.graphics.drawable.InsetDrawable mask=new android.graphics.drawable.InsetDrawable(shape(Color.WHITE,radius,0),0,dp(verticalInset),0,dp(verticalInset));
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask);
+    }
+    private RippleDrawable iconBackground(int color,int visualSize){
+        android.graphics.drawable.LayerDrawable content=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{shape(color==ACCENT?AppThemeTokens.ACTION_FILL:color,visualSize/2,0)});
+        content.setLayerSize(0,dp(visualSize),dp(visualSize));content.setLayerGravity(0,Gravity.CENTER);
+        android.graphics.drawable.LayerDrawable mask=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{shape(Color.WHITE,visualSize/2,0)});
+        mask.setLayerSize(0,dp(visualSize),dp(visualSize));mask.setLayerGravity(0,Gravity.CENTER);
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask);
     }
 
     private RippleDrawable ripple(int color, int radius) {

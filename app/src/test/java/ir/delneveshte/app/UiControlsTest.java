@@ -47,7 +47,9 @@ public class UiControlsTest {
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();View home=a.getWindow().getDecorView();checkIconButtons(home);CatalogBrowsingTest.text(home,"جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();
             View root=a.getWindow().getDecorView();checkIconButtons(root);EditText field=CatalogBrowsingTest.search(root);field.setText("zzzz");shadowOf(Looper.getMainLooper()).idle();
-            View clear=CatalogBrowsingTest.described(root,"پاک‌کردن جست‌وجو");assertTrue(clear.isEnabled());clear.performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());
+            View clear=CatalogBrowsingTest.described(root,"پاک‌کردن جست‌وجو");assertTrue(clear.isEnabled());int size=Math.round(48*app.getResources().getDisplayMetrics().density);clear.measure(View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY));clear.layout(0,0,size,size);
+            long now=android.os.SystemClock.uptimeMillis();android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,2,2,0),up=android.view.MotionEvent.obtain(now,now+10,android.view.MotionEvent.ACTION_UP,2,2,0);
+            assertTrue(clear.dispatchTouchEvent(down));assertTrue(clear.dispatchTouchEvent(up));down.recycle();up.recycle();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());
         }
     }
     @Test public void settingsOnlyExposeDestinationCountAndGeneralAndroidHelp(){
@@ -62,5 +64,27 @@ public class UiControlsTest {
         Drawable x=app.getDrawable(R.drawable.ic_close);Bitmap bitmap=Bitmap.createBitmap(96,96,Bitmap.Config.ARGB_8888);x.setBounds(0,0,96,96);x.draw(new Canvas(bitmap));
         Rect ink=new Rect(96,96,0,0);for(int y=0;y<96;y++)for(int col=0;col<96;col++)if((bitmap.getPixel(col,y)>>>24)>128){ink.left=Math.min(ink.left,col);ink.top=Math.min(ink.top,y);ink.right=Math.max(ink.right,col+1);ink.bottom=Math.max(ink.bottom,y+1);}
         assertTrue(ink.width()>40);assertTrue(Math.abs(ink.width()-ink.height())<=2);
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE) public void cardIconPaintsASmallSurfaceInsideItsLargerTouchTarget(){
+        try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
+            MainActivity a=c.get();ImageButton clock=(ImageButton)CatalogBrowsingTest.described(a.getWindow().getDecorView(),"ارسال در زمان دلخواه");float density=app.getResources().getDisplayMetrics().density;int size=Math.round(48*density);
+            assertTrue(clock.getMinimumWidth()>=size);assertTrue(clock.getDrawable().getIntrinsicWidth()<=Math.round(20*density));
+            Bitmap bitmap=Bitmap.createBitmap(size,size,Bitmap.Config.ARGB_8888);Drawable background=clock.getBackground();background.setBounds(0,0,size,size);background.draw(new Canvas(bitmap));Rect ink=new Rect(size,size,0,0);
+            for(int y=0;y<size;y++)for(int x=0;x<size;x++)if((bitmap.getPixel(x,y)>>>24)>128){ink.left=Math.min(ink.left,x);ink.top=Math.min(ink.top,y);ink.right=Math.max(ink.right,x+1);ink.bottom=Math.max(ink.bottom,y+1);}
+            assertTrue(ink.width()>=Math.round(30*density));assertTrue(ink.width()<=Math.round(33*density));assertEquals(ink.width(),ink.height());assertTrue(ink.left>=Math.round(7*density));
+        }
+    }
+    private void checkTextButtonsFit(View v){
+        if(v instanceof android.widget.Button){android.widget.Button b=(android.widget.Button)v;assertNotNull(b.getLayout());assertTrue("Clipped button: "+b.getText(),b.getHeight()-b.getCompoundPaddingTop()-b.getCompoundPaddingBottom()>=b.getLayout().getHeight());}
+        if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)checkTextButtonsFit(g.getChildAt(i));}
+    }
+    @Test public void narrowScreenAndLargeSystemFontKeepLabelsVisibleAndNavigationBelowContent() throws Exception {
+        android.content.res.Resources resources=app.getResources();android.content.res.Configuration config=new android.content.res.Configuration(resources.getConfiguration());config.fontScale=1.6f;resources.updateConfiguration(config,resources.getDisplayMetrics());
+        try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
+            MainActivity a=c.get();CatalogBrowsingTest.text(a.getWindow().getDecorView(),"تنظیمات").performClick();shadowOf(Looper.getMainLooper()).idle();View root=a.getWindow().getDecorView();float density=resources.getDisplayMetrics().density;int w=Math.round(320*density),h=Math.round(640*density);
+            root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);checkTextButtonsFit(root);
+            View nav=(View)CatalogBrowsingTest.text(root,"پیشنهادها").getParent().getParent().getParent();Field scroll=MainActivity.class.getDeclaredField("pageScroll");scroll.setAccessible(true);View content=(View)scroll.get(a);Rect contentRect=new Rect(),navRect=new Rect();assertTrue(content.getGlobalVisibleRect(contentRect));assertTrue(nav.getGlobalVisibleRect(navRect));assertTrue("Navigation overlaps content",contentRect.bottom<=navRect.top);
+        }
     }
 }

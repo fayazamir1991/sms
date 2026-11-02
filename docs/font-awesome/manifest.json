@@ -16,7 +16,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_search",
@@ -31,7 +32,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_queue",
@@ -46,7 +48,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_history",
@@ -61,7 +64,8 @@
       "android_viewport": [
         576.0,
         576.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_settings",
@@ -76,7 +80,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_close",
@@ -91,7 +96,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_clock",
@@ -106,7 +112,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_compose",
@@ -121,7 +128,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_back",
@@ -136,7 +144,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_check",
@@ -151,7 +160,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_send",
@@ -166,7 +176,8 @@
       "android_viewport": [
         576.0,
         576.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_edit_schedule",
@@ -181,7 +192,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_info",
@@ -196,7 +208,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_copy",
@@ -211,7 +224,8 @@
       "android_viewport": [
         512.0,
         512.0
-      ]
+      ],
+      "android_size_dp": 20
     },
     {
       "resource": "ic_delete",
@@ -226,7 +240,8 @@
         544,
         544
       ],
-      "adaptation": "Original paths preserved; centered square padding includes glyph overshoot; runtime tint"
+      "adaptation": "Original paths preserved; centered square padding includes glyph overshoot; runtime tint",
+      "android_size_dp": 20
     }
   ]
 }

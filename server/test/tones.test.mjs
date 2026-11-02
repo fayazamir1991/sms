@@ -28,7 +28,7 @@ test('real SQLite backfill preserves old bodies, IDs, admin edits and private ta
   const old=(await db.prepare('SELECT id,body FROM catalog_messages ORDER BY id').all()).results;assert.equal(old.length,1002);
   const first=await ensureToneCatalog(db);assert.equal(first.backfilled,1002);assert.equal(first.added,2000);
   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM catalog_messages WHERE category!='شعر' AND body_formal IS NOT NULL AND body_colloquial IS NOT NULL").first()).n,3002);
-  assert.deepEqual((await db.prepare('SELECT id,body FROM catalog_messages WHERE created_at=(SELECT MIN(created_at) FROM catalog_messages) ORDER BY id').all()).results,old);
+  const oldIds=new Set(old.map(r=>r.id));assert.deepEqual((await db.prepare('SELECT id,body FROM catalog_messages ORDER BY id').all()).results.filter(r=>oldIds.has(r.id)),old);
   const newer=await db.prepare("SELECT catalog_id AS id FROM catalog_origins WHERE source_revision='original-tones-v1' LIMIT 1").first();
   await db.prepare('UPDATE catalog_messages SET body_formal=?,body_colloquial=?,active=0 WHERE id=?').bind('متن رسمی مدیر','متن محاوره‌ای مدیر',newer.id).run();
   // A missing field is repaired, without overwriting a manually authored sibling field.

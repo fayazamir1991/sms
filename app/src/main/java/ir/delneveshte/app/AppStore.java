@@ -26,15 +26,16 @@ public final class AppStore {
         prefs = app.getSharedPreferences("settings", 0);
     }
     private static class Helper extends SQLiteOpenHelper {
-        Helper(Context c) { super(c, "messages.db", null, 2); }
+        Helper(Context c) { super(c, "messages.db", null, 3); }
         @Override public void onConfigure(SQLiteDatabase d) { d.setForeignKeyConstraintsEnabled(true); }
         @Override public void onCreate(SQLiteDatabase d) {
-            d.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT,body TEXT NOT NULL,recipient TEXT NOT NULL,simLabel TEXT,subscriptionId INTEGER,approvedAt INTEGER,plannedAt INTEGER DEFAULT 0,submittedAt INTEGER DEFAULT 0,status TEXT,detail TEXT DEFAULT '',planDay TEXT DEFAULT '',partCount INTEGER DEFAULT 0,sync_id TEXT,revision INTEGER NOT NULL DEFAULT 1,synced_revision INTEGER NOT NULL DEFAULT 0)");
+            d.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT,body TEXT NOT NULL,recipient TEXT NOT NULL,simLabel TEXT,subscriptionId INTEGER,approvedAt INTEGER,plannedAt INTEGER DEFAULT 0,submittedAt INTEGER DEFAULT 0,status TEXT,detail TEXT DEFAULT '',planDay TEXT DEFAULT '',partCount INTEGER DEFAULT 0,sync_id TEXT,revision INTEGER NOT NULL DEFAULT 1,synced_revision INTEGER NOT NULL DEFAULT 0,sendMode TEXT NOT NULL DEFAULT 'RANDOM',requestedAt INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE parts(messageId INTEGER,part INTEGER,success INTEGER,PRIMARY KEY(messageId,part))");
             syncTables(d);
         }
         @Override public void onUpgrade(SQLiteDatabase d,int oldVersion,int newVersion) {
-            if(oldVersion!=1 || newVersion!=2) throw new IllegalStateException("Unsupported schema; preserving existing data");
+            if(oldVersion<1||newVersion!=3)throw new IllegalStateException("Unsupported schema; preserving existing data");
+            if(oldVersion<2){
             d.execSQL("ALTER TABLE messages ADD COLUMN sync_id TEXT");
             d.execSQL("ALTER TABLE messages ADD COLUMN revision INTEGER NOT NULL DEFAULT 1");
             d.execSQL("ALTER TABLE messages ADD COLUMN synced_revision INTEGER NOT NULL DEFAULT 0");
@@ -45,6 +46,12 @@ public final class AppStore {
                     v.put("sync_id",UUID.randomUUID().toString());d.update("messages",v,"id=?",new String[]{""+id});
                     event(d,id,c.getString(1),1,Math.max(c.getLong(2),c.getLong(3)));
                 }
+            }
+            }
+            if(oldVersion<3){
+                d.execSQL("ALTER TABLE messages ADD COLUMN sendMode TEXT NOT NULL DEFAULT 'RANDOM'");
+                d.execSQL("ALTER TABLE messages ADD COLUMN requestedAt INTEGER NOT NULL DEFAULT 0");
+                d.execSQL("UPDATE messages SET sendMode='IMMEDIATE' WHERE status='IMMEDIATE'");
             }
         }
         private void syncTables(SQLiteDatabase d) {
@@ -76,7 +83,12 @@ public final class AppStore {
     }
     public long approve(String body,Settings s,String label) { return insert(body,s,label,"APPROVED"); }
     public long approveImmediate(String body,Settings s,String label) { return insert(body,s,label,"IMMEDIATE"); }
-    private long insert(String body,Settings s,String label,String state) {
+    public long approveFixed(String body,Settings s,String label,long at) {
+        if(at<=System.currentTimeMillis())throw new IllegalArgumentException("زمان ارسال باید در آینده باشد.");
+        return insert(body,s,label,"APPROVED","FIXED",at);
+    }
+    private long insert(String body,Settings s,String label,String state){return insert(body,s,label,state,"IMMEDIATE".equals(state)?"IMMEDIATE":"RANDOM",0);}
+    private long insert(String body,Settings s,String label,String state,String mode,long requestedAt) {
         if(!s.valid()||body==null||body.trim().isEmpty()) throw new IllegalArgumentException("متن و تنظیمات را بررسی کنید");
         long id;
         synchronized(LOCK) {
@@ -84,6 +96,8 @@ public final class AppStore {
             try {
                 long now=System.currentTimeMillis();ContentValues v=values(state,"");
                 v.put("body",body);v.put("recipient",s.recipient);v.put("subscriptionId",s.subscriptionId);
+                v.put("sendMode",mode);v.put("requestedAt",requestedAt);
+                if(requestedAt>0)v.put("plannedAt",requestedAt);
                 v.put("simLabel",label);v.put("approvedAt",now);v.put("sync_id",UUID.randomUUID().toString());
                 id=db.insertOrThrow("messages",null,v);event(db,id,state,1,now);db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
@@ -98,7 +112,7 @@ public final class AppStore {
         m.subscriptionId=c.getInt(c.getColumnIndexOrThrow("subscriptionId"));m.partCount=c.getInt(c.getColumnIndexOrThrow("partCount"));
         m.approvedAt=c.getLong(c.getColumnIndexOrThrow("approvedAt"));m.plannedAt=c.getLong(c.getColumnIndexOrThrow("plannedAt"));
         m.submittedAt=c.getLong(c.getColumnIndexOrThrow("submittedAt"));m.syncId=c.getString(c.getColumnIndexOrThrow("sync_id"));
-        m.revision=c.getLong(c.getColumnIndexOrThrow("revision"));return m;
+        m.revision=c.getLong(c.getColumnIndexOrThrow("revision"));m.sendMode=c.getString(c.getColumnIndexOrThrow("sendMode"));m.requestedAt=c.getLong(c.getColumnIndexOrThrow("requestedAt"));return m;
     }
     private List<Message> list(String where,String order) {
         synchronized(LOCK) {
@@ -110,7 +124,7 @@ public final class AppStore {
     public Message get(long id) { List<Message> rows=list("id="+id,"id");return rows.isEmpty()?null:rows.get(0); }
     public List<Message> queue() { return list("status IN ('APPROVED','SCHEDULED')","approvedAt,id"); }
     public List<Message> history() { return list("status NOT IN ('APPROVED','SCHEDULED')","id DESC LIMIT 100"); }
-    public List<Message> unscheduled() { return list("status='APPROVED'","approvedAt,id"); }
+    public List<Message> unscheduled() { return list("status='APPROVED' AND sendMode='RANDOM'","approvedAt,id"); }
     public List<Message> scheduled() { return list("status='SCHEDULED'","plannedAt,id"); }
     public int approvedCount() { return queue().size(); }
 
@@ -133,20 +147,30 @@ public final class AppStore {
         if(count>0)CloudScheduler.requestSync(app);return count;
     }
     public boolean cancel(long id) { return mutate(values("CANCELLED","لغو توسط شما"),"id=? AND status IN ('APPROVED','SCHEDULED')",new String[]{""+id})==1; }
-    public void requeueFuture() {
+    public void requeueRandom() {
         ContentValues v=values("APPROVED","");v.put("plannedAt",0);v.put("planDay","");
-        mutate(v,"status='SCHEDULED'",null);
+        mutate(v,"status='SCHEDULED' AND sendMode='RANDOM'",null);
     }
+    public void requeueFuture() {
+        requeueRandom();
+        mutate(values("APPROVED","ارسال زمان‌دار متوقف است؛ زمان انتخاب‌شده حفظ شد."),"status='SCHEDULED' AND sendMode='FIXED'",null);
+    }
+    public List<Message> randomScheduled(){return list("status='SCHEDULED' AND sendMode='RANDOM'","plannedAt,id");}
+    public List<Message> fixedQueue(){return list("status IN ('APPROVED','SCHEDULED') AND sendMode='FIXED'","requestedAt,id");}
     public void recoverUncertain(long now) {
         mutate(values("UNCERTAIN","پاسخ قطعی ارسال دریافت نشد؛ ارسال مجدد خودکار انجام نمی‌شود"),"status='SENDING' AND submittedAt<?",new String[]{""+(now-900000)});
         mutate(values("FAILED","آماده‌سازی ارسال فوری کامل نشد؛ ارسال خودکار انجام نمی‌شود"),"status='IMMEDIATE' AND approvedAt<?",new String[]{""+(now-900000)});
     }
-    public void expireSchedules(long now) { mutate(values("APPROVED",""),"status='SCHEDULED' AND plannedAt<?",new String[]{""+now}); }
+    public void expireSchedules(long now) { mutate(values("APPROVED",""),"status='SCHEDULED' AND sendMode='RANDOM' AND plannedAt<?",new String[]{""+now}); }
     public int attemptedOn(String day) {
-        synchronized(LOCK) { try(Cursor c=db.rawQuery("SELECT COUNT(*) FROM messages WHERE planDay=? AND submittedAt>0",new String[]{day})) { c.moveToFirst();return c.getInt(0); } }
+        synchronized(LOCK) { try(Cursor c=db.rawQuery("SELECT COUNT(*) FROM messages WHERE planDay=? AND submittedAt>0 AND sendMode='RANDOM'",new String[]{day})) { c.moveToFirst();return c.getInt(0); } }
     }
     public boolean schedule(long id,long at,String day) {
         ContentValues v=values("SCHEDULED","");v.put("plannedAt",at);v.put("planDay",day);
+        return mutate(v,"id=? AND status IN ('APPROVED','SCHEDULED') AND (sendMode<>'FIXED' OR requestedAt=?)",new String[]{""+id,""+at})==1;
+    }
+    public boolean prepareImmediate(long id,long at,String day){
+        ContentValues v=values("IMMEDIATE","");v.put("plannedAt",at);v.put("planDay",day);v.put("sendMode","IMMEDIATE");
         return mutate(v,"id=? AND status IN ('APPROVED','SCHEDULED')",new String[]{""+id})==1;
     }
     public boolean claim(long id,long now,int parts) {
@@ -184,7 +208,7 @@ public final class AppStore {
             for(Message m:list("revision>synced_revision OR EXISTS(SELECT 1 FROM sync_events e WHERE e.message_id=messages.id)","id LIMIT "+Math.max(1,Math.min(5,limit)))) {
                 JSONObject v=new JSONObject().put("id",m.syncId).put("body",m.body).put("recipient",m.recipient)
                     .put("sim_id",m.subscriptionId).put("status",m.status).put("revision",m.revision)
-                    .put("approved_at",m.approvedAt).put("planned_at",m.plannedAt).put("submitted_at",m.submittedAt);
+                    .put("send_mode",m.sendMode).put("requested_at",m.requestedAt).put("approved_at",m.approvedAt).put("planned_at",m.plannedAt).put("submitted_at",m.submittedAt);
                 JSONArray events=new JSONArray();
                 try(Cursor c=db.rawQuery("SELECT id,status,revision,occurred_at FROM sync_events WHERE message_id=? ORDER BY revision,id LIMIT 5",new String[]{""+m.id})) {
                     while(c.moveToNext())events.put(new JSONObject().put("id",c.getString(0)).put("status",c.getString(1))

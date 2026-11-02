@@ -18,7 +18,7 @@ def ui():
 
 def count(root):
     for node in root.iter('node'):
-        match = re.fullmatch(r'پیام‌ها:\s*([0-9۰-۹٠-٩]+)', node.get('text', ''))
+        match = re.match(r'پیام‌ها:\s*([0-9۰-۹٠-٩]+)', node.get('text', ''))
         if match:
             value = int(match.group(1))
             assert value > 0, 'The offline catalog is visibly empty in the actual APK'
@@ -30,12 +30,15 @@ def launch():
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
     return ui()
 
-adb('install', '-r', str(APK))
+adb('install', '-r', 'release-input/delneveshte-0.8.1.apk')
 adb('shell', 'settings', 'put', 'global', 'airplane_mode_on', '1')
 adb('shell', 'svc', 'wifi', 'disable')
 adb('shell', 'svc', 'data', 'disable')
 root = launch()
-print('PASS: first offline launch shows', count(root), 'messages')
+assert count(root)>0
+adb('install','-r',str(APK))
+root = launch()
+print('PASS: preserved-signature update from 0.8.1, first offline launch shows', count(root), 'messages')
 for category in ['کوتاه', 'همه']:
     root = ui()
     node = next((n for n in root.iter('node') if n.get('text') == category), None)
@@ -46,3 +49,26 @@ for category in ['کوتاه', 'همه']:
     adb('shell', 'input', 'tap', str((x1 + x2) // 2), str((y1 + y2) // 2))
     print('PASS: offline category', category, 'shows', count(ui()), 'messages')
 print('PASS: repeated offline cold launch shows', count(launch()), 'messages')
+
+# The dedicated search page searches live without a submit button, and clear restores defaults.
+def tap_node(root, *, text=None, description=None):
+    node=next((n for n in root.iter('node') if (text is not None and n.get('text')==text) or (description is not None and n.get('content-desc')==description)),None)
+    assert node is not None, 'Missing UI control: '+str(text or description)
+    x1,y1,x2,y2=[int(v) for v in re.findall(r'\d+',node.get('bounds',''))]
+    adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2))
+
+root=ui()
+card=next(n for n in root.iter('node') if any(c.get('class')=='android.widget.TextView' and len(c.get('text',''))>25 for c in n) and sum(1 for d in n.iter('node') if d.get('class')=='android.widget.ImageButton')==2)
+body=next(c for c in card if c.get('class')=='android.widget.TextView')
+tap_node(root,text=body.get('text'))
+menu=ui();labels={n.get('text') for n in menu.iter('node')}
+assert {'ارسال همین حالا','ارسال در زمان تصادفی','ارسال در زمان دلخواه','ویرایش متن','اطلاعات منبع'}<=labels
+adb('shell','input','keyevent','4')
+print('PASS: compact message card has two icon actions and tap opens the full context menu.')
+tap_node(ui(),text='جست‌وجو')
+root=ui();field=next(n for n in root.iter('node') if n.get('class')=='android.widget.EditText')
+x1,y1,x2,y2=[int(v) for v in re.findall(r'\d+',field.get('bounds'))]
+adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));adb('shell','input','text','zzzz')
+root=ui();assert any(n.get('text','').startswith('پیام‌ها: ۰') for n in root.iter('node')), 'Typing must change results without submitting'
+tap_node(root,description='پاک‌کردن جست‌وجو');assert count(ui())>0
+print('PASS: dedicated live search changes results while typing, and clear restores messages without a search button.')

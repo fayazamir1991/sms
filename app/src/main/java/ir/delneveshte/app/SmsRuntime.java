@@ -36,6 +36,7 @@ public final class SmsRuntime {
     private static final int ALARM_REQUEST = 401;
     private static final int NOTICE_ID = 402;
     private static final long MINUTE = 60_000L;
+    static final long FIXED_GRACE=30*MINUTE;
     private static final Random RANDOM = new java.security.SecureRandom();
 
     private SmsRuntime() { }
@@ -142,53 +143,28 @@ public final class SmsRuntime {
             notifyStatus(app, "ارسال نیاز به بررسی دارد", problem);
             return;
         }
-        ZoneId zone = ZoneId.systemDefault();
-        LocalDate today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
-        long start = atMinute(today, zone, settings.startMinute);
-        long end = atMinute(today, zone, settings.endMinute);
-        String day = today.toString();
-
-        // Stale days and alarms delayed beyond the allowed window are not caught up by sending.
-        boolean stale = false;
-        for (Message message : store.scheduled()) {
-            if (!day.equals(message.planDay) || now >= end) {
-                stale = true;
-                break;
+        ZoneId zone=ZoneId.systemDefault();LocalDate today=Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
+        String day=today.toString();long end=atMinute(today,zone,settings.endMinute);
+        for(Message m:store.fixedQueue()){
+            if(("APPROVED".equals(m.status)&&m.requestedAt<=now)||now>m.requestedAt+FIXED_GRACE){
+                store.failBeforeSend(m.id,"زمان انتخاب‌شده گذشته است؛ پیام خودکار به زمان دیگری منتقل نمی‌شود.");
+            }else if("APPROVED".equals(m.status)){
+                store.schedule(m.id,m.requestedAt,Instant.ofEpochMilli(m.requestedAt).atZone(zone).toLocalDate().toString());
             }
         }
-        if (stale) store.requeueFuture();
-
-        int quota = Math.max(0, settings.dailyCount - store.attemptedOn(day));
-        List<Message> scheduled = store.scheduled();
-        if (quota == 0 || scheduled.size() > quota) {
-            store.requeueFuture();
-            scheduled = store.scheduled();
+        for(Message m:store.randomScheduled())if(!day.equals(m.planDay)||now>=end){store.requeueRandom();break;}
+        int quota=Math.max(0,settings.dailyCount-store.attemptedOn(day));
+        List<Message> random=store.randomScheduled();
+        if(quota==0||random.size()>quota){store.requeueRandom();random=store.randomScheduled();}
+        if(random.isEmpty()&&quota>0&&now<end){
+            List<Message> approved=store.unscheduled();int count=Math.min(quota,approved.size());
+            List<Long> times=SchedulePlanner.plan(today,zone,settings.startMinute,settings.endMinute,count,now,RANDOM);
+            for(int i=0;i<times.size();i++)store.schedule(approved.get(i).id,times.get(i),day);
         }
-
-        // Preserve existing random times. Reopening the app must not reshuffle the day's plan.
-        if (!scheduled.isEmpty()) {
-            arm(app, Math.max(now + 1000L, scheduled.get(0).plannedAt));
-            return;
-        }
-
-        List<Message> approved = store.unscheduled();
-        if (quota > 0 && !approved.isEmpty() && now < end) {
-            int count = Math.min(quota, approved.size());
-            List<Long> times = SchedulePlanner.plan(today, zone, settings.startMinute,
-                    settings.endMinute, count, now, RANDOM);
-            for (int i = 0; i < times.size() && i < approved.size(); i++) {
-                store.schedule(approved.get(i).id, times.get(i), day);
-            }
-            scheduled = store.scheduled();
-            if (!scheduled.isEmpty()) {
-                arm(app, Math.max(now + 1000L, scheduled.get(0).plannedAt));
-                return;
-            }
-        }
-        // There may be approved texts for tomorrow, or the queue may later be replenished.
-        // One lightweight inexact alarm replaces repeating timers and survives normal process death.
-        long tomorrow = atMinute(today.plusDays(1), zone, settings.startMinute);
-        arm(app, Math.max(now + MINUTE, tomorrow));
+        List<Message> scheduled=store.scheduled();
+        long next=scheduled.isEmpty()?Long.MAX_VALUE:scheduled.get(0).plannedAt;
+        if(!store.unscheduled().isEmpty())next=Math.min(next,atMinute(today.plusDays(1),zone,settings.startMinute));
+        if(next!=Long.MAX_VALUE)arm(app,Math.max(now+1000,next));else cancelAlarm(app);
     }
 
     /** Invoked exclusively by our alarm PendingIntent. Sends at most one delayed message per wake. */
@@ -209,23 +185,12 @@ public final class SmsRuntime {
                 notifyStatus(app, "ارسال متوقف شد", issue);
                 return;
             }
-            ZoneId zone = ZoneId.systemDefault();
-            LocalDate today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
-            String day = today.toString();
-            long start = atMinute(today, zone, settings.startMinute);
-            long end = atMinute(today, zone, settings.endMinute);
-            if (now >= start && now < end && store.attemptedOn(day) < settings.dailyCount) {
-                for (Message message : store.scheduled()) {
-                    if (message.plannedAt > now) break;
-                    if (!day.equals(message.planDay)) continue;
-                    try {
-                        sendLocked(app, store, message, true);
-                    } catch (IllegalStateException exception) {
-                        store.failBeforeSend(message.id, exception.getMessage());
-                        notifyStatus(app, "پیام ارسال نشد", exception.getMessage());
-                    }
-                    break;
-                }
+            for(Message message:store.scheduled()){
+                if(message.plannedAt>now)break;
+                if(!eligibleScheduled(store,message,now))continue;
+                try{sendLocked(app,store,message,true);}
+                catch(IllegalStateException exception){store.failBeforeSend(message.id,exception.getMessage());notifyStatus(app,"پیام ارسال نشد",exception.getMessage());}
+                break;
             }
             // Re-plan other overdue items instead of sending a burst after a delayed wake-up.
             store.expireSchedules(System.currentTimeMillis());
@@ -268,7 +233,7 @@ public final class SmsRuntime {
             if (!problem.isEmpty()) throw new IllegalStateException(problem);
             long now = System.currentTimeMillis();
             String day = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate().toString();
-            if (!store.schedule(id, now, day)) {
+            if (!store.prepareImmediate(id, now, day)) {
                 throw new IllegalStateException("وضعیت پیام تغییر کرده است؛ دوباره صف را بررسی کن.");
             }
             message = store.get(id);
@@ -351,6 +316,8 @@ public final class SmsRuntime {
     private static boolean eligibleScheduled(AppStore store, Message message, long now) {
         Settings current = store.settings();
         if (!current.enabled || !current.valid()) return false;
+        if("FIXED".equals(message.sendMode))return message.requestedAt==message.plannedAt&&now>=message.requestedAt&&now<=message.requestedAt+FIXED_GRACE;
+        if(!"RANDOM".equals(message.sendMode))return false;
         ZoneId zone = ZoneId.systemDefault();
         LocalDate date = Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
         return date.toString().equals(message.planDay)

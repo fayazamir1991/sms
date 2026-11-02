@@ -58,143 +58,63 @@ public class MessageActionsTest {
         store.saveSettings(settings);
     }
 
-    @Test public void addingSuggestionNeedsOneTapAndStaysOnSuggestions() {
-        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            MainActivity activity = controller.get();
-            View action = findText(activity.getWindow().getDecorView(), "افزودن به صف");
-            assertNotNull(action);
-            click(action);
-            assertEquals(1, store.queue().size());
-            assertNull(ShadowAlertDialog.getLatestAlertDialog());
-            assertNotNull(findText(activity.getWindow().getDecorView(), "بارگذاری پیام‌های بیشتر"));
-            assertTrue(ShadowToast.getTextOfLatestToast().contains("ارسال خودکار را روشن کن"));
-            assertFalse(action.isEnabled());
-            Settings changed = settings.copy();
-            changed.recipient = "+989351234567";
-            changed.subscriptionId = 8;
-            store.saveSettings(changed);
-            assertEquals(settings.recipient, store.queue().get(0).recipient);
-            assertEquals(7, store.queue().get(0).subscriptionId);
-        }
-    }
-
-    @Test public void editingAddsExactEditedTextWithoutAnotherDialog() {
-        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            click(findText(controller.get().getWindow().getDecorView(), "ویرایش و زمان‌بندی"));
-            AlertDialog editor = ShadowAlertDialog.getLatestAlertDialog();
-            assertNotNull(editor);
-            EditText input = findType(editor.getWindow().getDecorView(), EditText.class);
-            input.setText("دلم یک چای دونفره می‌خواهد ☕💕");
-            click(editor.getButton(AlertDialog.BUTTON_POSITIVE));
-            assertFalse(editor.isShowing());
-            assertSame(editor, ShadowAlertDialog.getLatestAlertDialog());
-            assertEquals(1, store.queue().size());
-            assertEquals("دلم یک چای دونفره می‌خواهد ☕💕", store.queue().get(0).body);
-        }
-    }
-
-    @Test public void cancellingImmediateSendDoesNotCreateOrQueueMessage() {
-        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            click(findText(controller.get().getWindow().getDecorView(), "ارسال فوری"));
-            AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
-            assertNotNull(confirmation);
-            assertTrue(store.queue().isEmpty());
-            assertTrue(store.history().isEmpty());
-            click(confirmation.getButton(AlertDialog.BUTTON_NEGATIVE));
-            assertTrue(store.queue().isEmpty());
-            assertTrue(store.history().isEmpty());
-        }
-    }
-
-    @Test public void immediateIntentCannotBecomeAnAutomaticQueuedSend() {
-        long id = store.approveImmediate("دوستت دارم ❤️", settings, "SIM 1");
-        assertTrue(store.queue().isEmpty());
-        assertTrue(store.unscheduled().isEmpty());
-        assertFalse(store.schedule(id, System.currentTimeMillis(), "2026-11-01"));
-        store.requeueFuture();
-        assertTrue(store.queue().isEmpty());
-        store.recoverUncertain(System.currentTimeMillis() + 16 * 60_000);
-        assertEquals("FAILED", store.get(id).status);
-        assertFalse(store.claim(id, System.currentTimeMillis(), 1));
-    }
-
-    @Test public void confirmingImmediateSendUsesThePreviewedRecipientAndNeverQueues() {
-        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
-            click(findText(controller.get().getWindow().getDecorView(), "ارسال فوری"));
-            AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
-            assertTrue(store.history().isEmpty());
-            Settings changed = settings.copy();
-            changed.recipient = "+989351234567";
-            store.saveSettings(changed);
-            click(confirmation.getButton(AlertDialog.BUTTON_POSITIVE));
-            assertTrue(store.queue().isEmpty());
-            assertEquals(1, store.history().size());
-            Message sent = store.history().get(0);
-            assertEquals(settings.recipient, sent.recipient);
-            assertEquals(7, sent.subscriptionId);
-            assertEquals("SENDING", sent.status);
-        }
-    }
-
-    @Test public void multipartImmediateSendIsClaimedOnceAndCallbacksAreDeduplicated() {
-        long id = store.approveImmediate("دلتنگتم 🫂❤️", settings, "SIM 1");
-        assertTrue(store.claim(id, System.currentTimeMillis(), 2));
-        assertFalse(store.claim(id, System.currentTimeMillis(), 2));
-        store.recordPart(id, 0, true, "");
-        store.recordPart(id, 0, true, "");
-        assertEquals("SENDING", store.get(id).status);
-        store.recordPart(id, 1, true, "");
-        assertEquals("SENT", store.get(id).status);
-        assertTrue(store.queue().isEmpty());
-    }
-
-    @Test public void browseLoadsTwentyThenAppendsAndSearchesWithoutLosingEarlierCards() throws Exception {
-        org.json.JSONArray rows=new org.json.JSONArray();
-        for(int i=0;i<45;i++)rows.put(new org.json.JSONObject().put("id",java.util.UUID.randomUUID().toString()).put("body","یاد تو "+(i%2==0?"باران":"لبخند")+" پیام "+i+" 💕").put("category","کوتاه").put("source","taw-bio").put("source_url","https://taw-bio.ir/source"));
-        store.replaceCatalog("کوتاه",rows);
-        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity activity=controller.get();assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۲۰"));
-            TextView initial=findPrefix(activity.getWindow().getDecorView(),"یاد تو ");assertNotNull(initial);String first=initial.getText().toString();
-            assertNull(findPrefix(activity.getWindow().getDecorView(),"منبع:"));
-            click(findText(activity.getWindow().getDecorView(),"بارگذاری پیام‌های بیشتر"));
-            assertNotNull(findText(activity.getWindow().getDecorView(),first));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۴۰"));
-            click(findText(activity.getWindow().getDecorView(),"بارگذاری پیام‌های بیشتر"));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۴۵"));
-            EditText query=findType(activity.getWindow().getDecorView(),EditText.class);query.setText("باران");click(findText(activity.getWindow().getDecorView(),"جست‌وجو"));assertNotNull(findText(activity.getWindow().getDecorView(),"پیام‌ها: ۲۰"));
-            assertNull(findPrefix(activity.getWindow().getDecorView(),"یاد تو لبخند"));
-        }
-    }
-    private static TextView findPrefix(View root,String prefix){
-        if(root instanceof TextView&&((TextView)root).getText().toString().startsWith(prefix))return (TextView)root;
-        if(root instanceof ViewGroup){ViewGroup group=(ViewGroup)root;for(int i=0;i<group.getChildCount();i++){TextView found=findPrefix(group.getChildAt(i),prefix);if(found!=null)return found;}}return null;
-    }
-
-    private static void click(View view) {
-        assertNotNull(view);
-        view.performClick();
+    private View root(MainActivity a){return a.getWindow().getDecorView();}
+    private void menu(MainActivity a,int action) throws Exception {
+        String body=CatalogBrowsingTest.options(a).get(0);CatalogBrowsingTest.text(root(a),body).performClick();
+        assertTrue(org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu().getMenu().performIdentifierAction(action,0));
         shadowOf(Looper.getMainLooper()).idle();
     }
-
-    private static View findText(View root, String text) {
-        if (root instanceof TextView && text.contentEquals(((TextView) root).getText())) return root;
-        if (root instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) root;
-            for (int i = 0; i < group.getChildCount(); i++) {
-                View found = findText(group.getChildAt(i), text);
-                if (found != null) return found;
-            }
+    @Test public void compactCardAddsRandomWithOneTapAndPreservesTheApprovedSnapshot() throws Exception {
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=c.get();View action=CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی");assertNotNull(action);action.performClick();
+            assertEquals(1,store.queue().size());assertNull(ShadowAlertDialog.getLatestAlertDialog());assertEquals("RANDOM",store.queue().get(0).sendMode);
+            assertFalse(CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی").isEnabled());
+            Settings changed=settings.copy();changed.recipient="+989351234567";changed.subscriptionId=8;store.saveSettings(changed);assertEquals(settings.recipient,store.queue().get(0).recipient);assertEquals(7,store.queue().get(0).subscriptionId);
         }
-        return null;
+    }
+    @Test public void editingOffersAllThreeModesAndRandomQueuesTheExactEditedText() throws Exception {
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();EditText input=CatalogBrowsingTest.search(editor.getWindow().getDecorView());input.setText("دلم یک چای دونفره می‌خواهد ☕💕");
+            for(String label:new String[]{"ارسال همین حالا","ارسال در زمان تصادفی","ارسال در زمان دلخواه"})assertNotNull(CatalogBrowsingTest.text(editor.getWindow().getDecorView(),label));
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان تصادفی").performClick();assertFalse(editor.isShowing());assertEquals(1,store.queue().size());assertEquals("دلم یک چای دونفره می‌خواهد ☕💕",store.queue().get(0).body);
+        }
+    }
+    @Test public void editingCanChooseAFixedTimeAndCancelCreatesNoQueueEntry() throws Exception {
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.search(editor.getWindow().getDecorView()).setText("قرار عاشقانهٔ ما 💕");
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();AlertDialog schedule=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());schedule.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(store.queue().isEmpty());assertTrue(editor.isShowing());
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();schedule=ShadowAlertDialog.getLatestAlertDialog();schedule.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            Message m=store.queue().get(0);assertEquals("FIXED",m.sendMode);assertTrue(m.requestedAt>System.currentTimeMillis());assertEquals("قرار عاشقانهٔ ما 💕",m.body);assertEquals(settings.recipient,m.recipient);assertFalse(editor.isShowing());
+        }
+    }
+    @Test public void immediateCancellationCreatesNothingAndConfirmationUsesThePreviewedRecipient() throws Exception {
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            menu(c.get(),1);AlertDialog confirmation=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(store.history().isEmpty());
+            menu(c.get(),1);confirmation=ShadowAlertDialog.getLatestAlertDialog();Settings changed=settings.copy();changed.recipient="+989351234567";store.saveSettings(changed);confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            assertTrue(store.queue().isEmpty());assertEquals(1,store.history().size());Message m=store.history().get(0);assertEquals(settings.recipient,m.recipient);assertEquals("SENDING",m.status);assertEquals("IMMEDIATE",m.sendMode);
+        }
+    }
+    @Test public void immediateIntentCannotBecomeAnAutomaticQueuedSend(){
+        long id=store.approveImmediate("دوستت دارم ❤️",settings,"SIM 1");assertTrue(store.queue().isEmpty());assertTrue(store.unscheduled().isEmpty());assertFalse(store.schedule(id,System.currentTimeMillis(),"2026-11-01"));store.requeueFuture();assertTrue(store.queue().isEmpty());store.recoverUncertain(System.currentTimeMillis()+16*60_000);assertEquals("FAILED",store.get(id).status);assertFalse(store.claim(id,System.currentTimeMillis(),1));
+    }
+    @Test public void multipartSendIsClaimedOnceAndCallbacksAreDeduplicated(){
+        long id=store.approveImmediate("دلتنگتم 🫂❤️",settings,"SIM 1");assertTrue(store.claim(id,System.currentTimeMillis(),2));assertFalse(store.claim(id,System.currentTimeMillis(),2));store.recordPart(id,0,true,"");store.recordPart(id,0,true,"");assertEquals("SENDING",store.get(id).status);store.recordPart(id,1,true,"");assertEquals("SENT",store.get(id).status);
+    }
+    @Test public void fixedTimeSurvivesPauseAndCannotBeRandomlyRescheduled() throws Exception {
+        long at=System.currentTimeMillis()+3*3600_000;long id=store.approveFixed("دیدار ما 💕",settings,"SIM",at);String day=java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString();assertTrue(store.schedule(id,at,day));assertFalse(store.schedule(id,at+1000,day));
+        store.requeueRandom();assertEquals("SCHEDULED",store.get(id).status);SmsRuntime.pause(RuntimeEnvironment.getApplication());Message m=store.get(id);assertEquals("APPROVED",m.status);assertEquals(at,m.requestedAt);assertEquals(at,m.plannedAt);assertTrue(store.unscheduled().isEmpty());
+        settings.enabled=true;store.saveSettings(settings);SmsRuntime.reconcile(RuntimeEnvironment.getApplication());assertEquals(at,store.get(id).plannedAt);assertEquals("SCHEDULED",store.get(id).status);
+        long random=store.approve("عشق ما 💕",settings,"SIM");SmsRuntime.reconcile(RuntimeEnvironment.getApplication());assertEquals("RANDOM",store.get(random).sendMode);assertEquals(at,store.get(id).plannedAt);
+    }
+    @Test public void overduePausedFixedMessageFailsInsteadOfEnteringRandomQueue() throws Exception {
+        long id=store.approveFixed("همیشه در یادم 💕",settings,"SIM",System.currentTimeMillis()+60_000);Field field=AppStore.class.getDeclaredField("db");field.setAccessible(true);SQLiteDatabase db=(SQLiteDatabase)field.get(null);db.execSQL("UPDATE messages SET requestedAt=?,plannedAt=? WHERE id=?",new Object[]{System.currentTimeMillis()-3600_000,System.currentTimeMillis()-3600_000,id});
+        settings.enabled=true;store.saveSettings(settings);SmsRuntime.reconcile(RuntimeEnvironment.getApplication());assertEquals("FAILED",store.get(id).status);assertTrue(store.unscheduled().isEmpty());
+    }
+    @Test public void fixedTimeIsIndependentOfRandomWindowAndDailyQuota() throws Exception {
+        settings.enabled=true;settings.startMinute=1320;settings.endMinute=1380;store.saveSettings(settings);
+        long at=java.time.LocalDate.now().plusDays(2).atTime(7,0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();long id=store.approveFixed("قرار صبحگاهی ما 💕",settings,"SIM",at);String day=java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString();store.schedule(id,at,day);
+        java.lang.reflect.Method eligible=SmsRuntime.class.getDeclaredMethod("eligibleScheduled",AppStore.class,Message.class,long.class);eligible.setAccessible(true);assertEquals(true,eligible.invoke(null,store,store.get(id),at+1000));assertEquals(false,eligible.invoke(null,store,store.get(id),at-1));assertEquals(false,eligible.invoke(null,store,store.get(id),at+SmsRuntime.FIXED_GRACE+1));
+        store.claim(id,at+1000,1);assertEquals(0,store.attemptedOn(day));
     }
 
-    private static <T extends View> T findType(View root, Class<T> type) {
-        if (type.isInstance(root)) return type.cast(root);
-        if (root instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) root;
-            for (int i = 0; i < group.getChildCount(); i++) {
-                T found = findType(group.getChildAt(i), type);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
 }

@@ -3,6 +3,9 @@ package ir.delneveshte.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -69,6 +72,15 @@ public class MainActivity extends Activity {
     private boolean refreshingSuggestions;
     private String catalogQuery="",catalogSearchDraft="",catalogCursor;
     private LinearLayout catalogResults;
+    private final List<String> searchPending=new ArrayList<>();
+    private final java.util.Set<String> searchKnown=new java.util.HashSet<>();
+    private boolean searchRemoteMore;
+    private boolean liveQuery(){return currentTab==4&&!catalogQuery.isEmpty();}
+    private void bufferSearch(String raw){String text=CatalogText.render(raw,catalogNickname());if(text!=null&&searchKnown.add(text))searchPending.add(raw);}
+    private void drainSearch(int count){int end=options.size()+Math.max(0,count);while(!searchPending.isEmpty()&&options.size()<end)appendOption(searchPending.remove(0));catalogHasMore=!searchPending.isEmpty()||searchRemoteMore;}
+    private final Runnable liveSearch=()->{if(currentTab==4&&!isFinishing()&&!isDestroyed())freshSuggestions();};
+    private String activeCategory(){return currentTab==4?"همه":category;}
+    private String activeQuery(){return currentTab==4?catalogQuery:"";}
     private boolean catalogRequested;
     private boolean usingOfflineCatalog=true;
     private boolean catalogHasMore=true;
@@ -131,16 +143,17 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
         CloudConfig cloud=new CloudConfig(this);
-        if(currentTab==0&&cloud.enabled()&&!catalogRequested&&activeEditorDialog==null)freshSuggestions();
+        if((currentTab==0||currentTab==4)&&cloud.enabled()&&(!catalogRequested||currentTab==4)&&activeEditorDialog==null)freshSuggestions();
     }
 
     @Override protected void onPause() {
         handler.removeCallbacks(refresh);
+        handler.removeCallbacks(liveSearch);
         super.onPause();
     }
 
     @Override protected void onDestroy() {
-        handler.removeCallbacks(refresh);
+        handler.removeCallbacks(refresh);handler.removeCallbacks(liveSearch);
         if (activeEditorDialog != null) activeEditorDialog.dismiss();
         super.onDestroy();
     }
@@ -182,7 +195,7 @@ public class MainActivity extends Activity {
         page.setPadding(dp(20), dp(8), dp(20), dp(20));
         scroll.addView(page);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        if (currentTab == 0) suggestionsPage();
+        if (currentTab == 0||currentTab==4) suggestionsPage();
         else if (currentTab == 1) queuePage();
         else if (currentTab == 2) historyPage();
         else settingsPage();
@@ -192,10 +205,9 @@ public class MainActivity extends Activity {
 
     private View appHeader() {
         LinearLayout row = horizontal();
-        row.setPadding(dp(22), dp(10), dp(22), dp(16));
+        row.setPadding(dp(18), dp(6), dp(18), dp(8));
         LinearLayout names = vertical();
-        names.addView(label("دل‌نوشته", 26, INK, true));
-        names.addView(label("چند کلمه، از دل تو", 12, MUTED, false));
+        names.addView(label("دل‌نوشته", 22, INK, true));
         row.addView(names, new LinearLayout.LayoutParams(0, -2, 1));
         boolean active = store.settings().enabled;
         String readiness = active ? SmsRuntime.readiness(this) : "";
@@ -215,135 +227,114 @@ public class MainActivity extends Activity {
         nav.setBackgroundColor(Color.WHITE);
         nav.setPadding(dp(6), dp(8), dp(6), dp(10));
         nav.setElevation(dp(5));
-        String[] titles = {"پیشنهادها", "صف ارسال", "سابقه", "تنظیمات"};
-        String[] icons = {"♡", "≋", "◷", "⚙"};
-        for (int i = 0; i < titles.length; i++) {
-            final int index = i;
-            TextView item = label(icons[i] + "\n" + titles[i], 12,
-                    currentTab == i ? ROSE : MUTED, currentTab == i);
-            item.setGravity(Gravity.CENTER);
-            item.setMinHeight(dp(54));
-            item.setPadding(dp(3), dp(4), dp(3), dp(4));
-            item.setBackground(ripple(currentTab == i ? PALE : Color.WHITE, 16));
-            item.setContentDescription(titles[i]);
-            item.setOnClickListener(v -> selectTab(index));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-            lp.setMargins(dp(3), 0, dp(3), 0);
-            nav.addView(item, lp);
+        String[] titles={"پیشنهادها","جست‌وجو","صف ارسال","سابقه","تنظیمات"};
+        int[] tabs={0,4,1,2,3};int[] icons={R.drawable.ic_launcher,R.drawable.ic_search,R.drawable.ic_queue,android.R.drawable.ic_menu_recent_history,android.R.drawable.ic_menu_preferences};
+        for(int i=0;i<titles.length;i++){
+            final int tab=tabs[i];boolean selected=currentTab==tab;
+            LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(54));item.setPadding(0,dp(4),0,dp(4));
+            ImageView icon=new ImageView(this);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ROSE:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
+            TextView title=label(titles[i],10,selected?ROSE:MUTED,selected);title.setGravity(Gravity.CENTER);item.addView(title);title.setOnClickListener(v->selectTab(tab));
+            item.setBackground(ripple(selected?PALE:Color.WHITE,14));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));
+            nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
         }
         return nav;
     }
 
-    private void selectTab(int tab) {
-        currentTab = tab;
-        render();
+    private void selectTab(int tab){
+        handler.removeCallbacks(liveSearch);browseGeneration++;currentTab=tab;
+        if(tab==0||tab==4){usingOfflineCatalog=true;renewOptions();render();freshSuggestions();}
+        else render();
     }
 
-    private void suggestionsPage() {
-        heading("برای امروز، از دل انتخاب کن", "پیام دلخواهت را به صف اضافه کن یا همین حالا بفرست.");
-        LinearLayout intro = card(PALE);
-        intro.addView(label("انتخاب تو، ارسال در زمان‌های متفاوت", 17, ROSE, true));
-        intro.addView(body("با «افزودن به صف»، همین متن برای ارسال در بازهٔ انتخابی تو ذخیره می‌شود.", 14));
-        ir.delneveshte.app.Settings saved = store.settings();
-        if (saved.valid()) {
-            intro.addView(phoneLabel(saved.recipient));
-            intro.addView(label(simLabel(saved.subscriptionId), 12, MUTED, false));
-        } else {
-            intro.addView(body("برای شروع، شمارهٔ همسرت و سیم‌کارت را در تنظیمات ذخیره کن.", 13));
+    private ImageButton compactAction(String description,int icon,Runnable action){
+        ImageButton button=new ImageButton(this);button.setImageResource(icon);button.setColorFilter(ROSE);
+        button.setContentDescription(description);button.setBackground(ripple(PALE,22));button.setPadding(dp(11),dp(11),dp(11),dp(11));
+        button.setOnClickListener(v->action.run());return button;
+    }
+    private void suggestionsPage(){
+        if(currentTab==4){
+            page.addView(label("جست‌وجو در همهٔ پیام‌ها",18,INK,true));
+            LinearLayout row=horizontal();EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);
+            search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});
+            search.setSingleLine(true);search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+            ImageButton clear=compactAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setEnabled(!catalogSearchDraft.isEmpty());
+            watch(search,value->{
+                catalogSearchDraft=value;catalogQuery=value.trim();clear.setEnabled(!value.isEmpty());
+                handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();
+                refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();
+                handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
+            });
+            search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
+            row.addView(search,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(dp(44),dp(44));cp.setMarginStart(dp(8));row.addView(clear,cp);page.addView(row);
+        }else{
+            HorizontalScrollView categories=new HorizontalScrollView(this);categories.setHorizontalScrollBarEnabled(false);LinearLayout chips=horizontal();
+            for(String option:TextBank.categories()){
+                TextView chip=label(option,13,option.equals(category)?Color.WHITE:ROSE,true);chip.setGravity(Gravity.CENTER);chip.setMinHeight(dp(44));chip.setPadding(dp(16),dp(7),dp(16),dp(7));
+                chip.setBackground(ripple(option.equals(category)?ROSE:Color.WHITE,22));chip.setOnClickListener(v->{category=option;freshSuggestions();render();});
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.setMarginEnd(dp(7));chips.addView(chip,cp);
+            }
+            categories.addView(chips);addPage(categories,0,8);
         }
-        if (!saved.enabled) intro.addView(body("ارسال خودکار خاموش است؛ پیام‌ها تا روشن‌کردن آن در صف می‌مانند.", 13));
-        page.addView(intro);
-        HorizontalScrollView categories = new HorizontalScrollView(this);
-        categories.setHorizontalScrollBarEnabled(false);
-        LinearLayout chips = horizontal();
-        for (String option : TextBank.categories()) {
-            TextView chip = label(option, 13, option.equals(category) ? Color.WHITE : ROSE, true);
-            chip.setGravity(Gravity.CENTER);
-            chip.setMinHeight(dp(44));
-            chip.setPadding(dp(17), dp(8), dp(17), dp(8));
-            chip.setBackground(ripple(option.equals(category) ? ROSE : Color.WHITE, 22));
-            chip.setOnClickListener(v -> { category = option; freshSuggestions();render(); });
-            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
-            cp.setMarginEnd(dp(8));
-            chips.addView(chip, cp);
-        }
-        categories.addView(chips);
-        addPage(categories, 0, 14);
-        EditText search=input(catalogSearchDraft,"جست‌وجو در متن پیام‌ها",InputType.TYPE_CLASS_TEXT);
-        watch(search,value->catalogSearchDraft=value);
-        search.setSingleLine(true);search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        Runnable submit=()->{catalogQuery=search.getText().toString().trim();catalogSearchDraft=catalogQuery;freshSuggestions();};
-        search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){submit.run();return true;}return false;});
-        page.addView(search,match());page.addView(button("جست‌وجو",false,submit));
-        catalogResults=vertical();page.addView(catalogResults,match());
-        renderCatalogResults();
-        addPage(button("متن خودم را می‌نویسم", false, () -> editText("")), 10, 0);
+        catalogResults=vertical();page.addView(catalogResults,match());renderCatalogResults();
+        addPage(button("نوشتن پیام",false,()->editText("")),8,0);
     }
 
     private void renderCatalogResults(){
-        if(currentTab!=0||catalogResults==null)return;
+        if((currentTab!=0&&currentTab!=4)||catalogResults==null)return;
         LinearLayout target=catalogResults;target.removeAllViews();
-        if(refreshingSuggestions)target.addView(body("در حال به‌روزرسانی از سرور… پیام‌های روی گوشی در دسترس‌اند.",12));
-        else if(usingOfflineCatalog)target.addView(body("پیام‌های روی گوشی · شامل بانک آماده و پیام‌های ذخیره‌شده",12));
-        target.addView(label("پیام‌ها: "+fa(options.size()),12,MUTED,false));
-        if (options.isEmpty()) target.addView(body(refreshingSuggestions?"در حال دریافت پیام‌ها…":"پیامی پیدا نشد؛ عبارت یا دستهٔ دیگری را امتحان کن.",14));
-        if(options.isEmpty()&&!catalogQuery.isEmpty()&&!"همه".equals(category))target.addView(button("جست‌وجو در همهٔ دسته‌ها",false,()->{category="همه";freshSuggestions();render();}));
-        int number = 0;
-        for (String text : options) {
-            LinearLayout c = card(Color.WHITE);
-            LinearLayout cardHeader=horizontal();
-            cardHeader.addView(label("پیشنهاد "+fa(++number),12,MUTED,true),new LinearLayout.LayoutParams(0,-2,1));
-            Button menu=button("⋮",false,()->{});menu.setContentDescription("گزینه‌های پیام");menu.setMinWidth(dp(48));
-            menu.setOnClickListener(v->{android.widget.PopupMenu popup=new android.widget.PopupMenu(this,menu);popup.getMenu().add("اطلاعات منبع");popup.setOnMenuItemClickListener(item->{TextView info=body(credits.getOrDefault(text,"بانک دل‌نوشته"),14);info.setTextIsSelectable(true);new AlertDialog.Builder(this).setTitle("اطلاعات منبع").setView(info).setPositiveButton("بستن",null).show();return true;});popup.show();});
-            cardHeader.addView(menu,new LinearLayout.LayoutParams(dp(48),dp(48)));c.addView(cardHeader);
-            TextView message = body(text, 18);
-            message.setPadding(0, dp(12), 0, dp(12));
-            message.setTextIsSelectable(true);
-            c.addView(message);
-
-            Button enqueue = actionButton("افزودن به صف", R.drawable.ic_queue, true, () -> { });
-            enqueue.setOnClickListener(v -> {
-                if (enqueueMessage(text)) {
-                    sessionEnqueued.add(text);
-                    enqueue.setText("به صف اضافه شد");
-                    enqueue.setContentDescription("این پیام به صف اضافه شد");
-                    setButtonIcon(enqueue, R.drawable.ic_check, Color.WHITE);
-                    enqueue.setEnabled(false);
-                    enqueue.setAlpha(0.7f);
-                }
+        String status="پیام‌ها: "+fa(options.size());
+        if(refreshingSuggestions)status+=" · در حال دریافت…";
+        else if(usingOfflineCatalog)status+=" · روی گوشی";
+        target.addView(label(status,12,MUTED,false));
+        if(options.isEmpty())target.addView(body(refreshingSuggestions?"در حال جست‌وجو…":"پیامی پیدا نشد.",14));
+        for(String text:options){
+            LinearLayout c=card(Color.WHITE);TextView message=body(text,18);message.setPadding(0,dp(4),0,dp(8));
+            message.setOnClickListener(v->messageMenu(c,text));message.setOnLongClickListener(v->{messageMenu(c,text);return true;});
+            c.setOnClickListener(v->messageMenu(c,text));c.setOnLongClickListener(v->{messageMenu(c,text);return true;});c.addView(message);
+            LinearLayout actions=horizontal();actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+            ImageButton random=compactAction("ارسال در زمان تصادفی",sessionEnqueued.contains(text)?R.drawable.ic_check:R.drawable.ic_queue,()->{
+                if(sessionEnqueued.contains(text)){toast("این پیام در صف است.");return;}
+                if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
-            if(sessionEnqueued.contains(text)){enqueue.setEnabled(false);enqueue.setText("به صف اضافه شد");}
-            c.addView(enqueue);
-            LinearLayout actions = horizontal();
-            Button edit = actionButton("ویرایش و زمان‌بندی", R.drawable.ic_edit_schedule, false, () -> editText(text));
-            Button send = actionButton("ارسال فوری", R.drawable.ic_send, false, () -> confirmNewSend(text));
-            edit.setTextSize(13);
-            send.setTextSize(13);
-            edit.setMinHeight(dp(64));
-            send.setMinHeight(dp(64));
-            LinearLayout.LayoutParams editParams = weighted();
-            editParams.setMarginEnd(dp(8));
-            actions.addView(edit, editParams);
-            actions.addView(send, weighted());
-            add(c, actions, 8, 0);
-            target.addView(c);
+            random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(44),dp(44)));
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
-        else if(!options.isEmpty())target.addView(body("به پایان این فهرست رسیدی.",12));
-
+    }
+    private void messageMenu(View anchor,String text){
+        android.widget.PopupMenu menu=new android.widget.PopupMenu(this,anchor);
+        menu.getMenu().add(0,1,0,"ارسال همین حالا").setIcon(R.drawable.ic_send);
+        menu.getMenu().add(0,2,1,"ارسال در زمان تصادفی").setIcon(R.drawable.ic_queue);
+        menu.getMenu().add(0,3,2,"ارسال در زمان دلخواه").setIcon(R.drawable.ic_clock);
+        menu.getMenu().add(0,4,3,"ویرایش متن").setIcon(R.drawable.ic_edit_schedule);
+        menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(android.R.drawable.ic_menu_info_details);
+        menu.getMenu().add(0,6,5,"کپی متن").setIcon(android.R.drawable.ic_menu_set_as);
+        if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
+        menu.setOnMenuItemClickListener(item->{
+            switch(item.getItemId()){
+                case 1:confirmNewSend(text);break;
+                case 2:if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}break;
+                case 3:scheduleMessage(text,null);break;
+                case 4:editText(text);break;
+                case 5:TextView info=body(credits.getOrDefault(text,"بانک دل‌نوشته"),14);info.setTextIsSelectable(true);new AlertDialog.Builder(this).setTitle("اطلاعات منبع").setView(info).setPositiveButton("بستن",null).show();break;
+                case 6:((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("پیام",text));toast("متن کپی شد.");break;
+                default:return false;
+            }return true;
+        });menu.show();
     }
 
     private void freshSuggestions(){loadCatalogPage(true);}
     private void loadCatalogPage(boolean reset){
         catalogRequested=true;
         if(!reset&&refreshingSuggestions)return;
+        if(!reset&&liveQuery()&&!searchPending.isEmpty()){drainSearch(20);renderCatalogResults();return;}
         if(reset){browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
         CloudConfig cloud=new CloudConfig(this);
         if(!cloud.enabled()||(!reset&&usingOfflineCatalog)){
             if(!reset)appendLocalPage();
             refreshingSuggestions=false;usingOfflineCatalog=true;renderCatalogResults();return;
         }
-        final int generation=browseGeneration,cloudGeneration=cloud.generation();final String query=catalogQuery,chosenCategory=category,cursor=catalogCursor;
+        final int generation=browseGeneration,cloudGeneration=cloud.generation();final String query=activeQuery(),chosenCategory=activeCategory(),cursor=catalogCursor;
         refreshingSuggestions=true;renderCatalogResults();
         new Thread(()->{
             org.json.JSONObject response=null;String failure=null;
@@ -362,10 +353,17 @@ public class MainActivity extends Activity {
                     try{
                         org.json.JSONArray rows=data.getJSONArray("messages");
                         boolean usable=false;for(int i=0;i<rows.length();i++)if(CatalogText.render(rows.getJSONObject(i).getString("body"),catalogNickname())!=null){usable=true;break;}
-                        if(usable||!catalogQuery.isEmpty()){
-                            if(reset){options.clear();credits.clear();}
-                            for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
-                            catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);catalogHasMore=data.optBoolean("has_more",false);
+                        if(usable||!query.isEmpty()){
+                            if(liveQuery()){
+                                for(int i=0;i<rows.length();i++)bufferSearch(rows.getJSONObject(i).getString("body"));
+                                searchRemoteMore=data.optBoolean("has_more",false);drainSearch(reset?Math.max(0,20-options.size()):20);
+                                usingOfflineCatalog=rows.length()==0;
+                            }else{
+                                if(reset){options.clear();credits.clear();}
+                                for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
+                                catalogHasMore=data.optBoolean("has_more",false);
+                            }
+                            catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);
                         }else{
                             usingOfflineCatalog=true;
                             if(options.isEmpty())renewOptions();
@@ -373,7 +371,7 @@ public class MainActivity extends Activity {
                         }
                         cloud.catalogUpdated();
                     }catch(Exception ignored){cloud.error("پاسخ جست‌وجو معتبر نیست.");}
-                }else{cloud.error(error);if(reset&&options.isEmpty()){usingOfflineCatalog=true;renewOptions();}toast(error);}
+                }else{cloud.error(error);usingOfflineCatalog=true;if(liveQuery()){searchRemoteMore=false;catalogHasMore=!searchPending.isEmpty();}else if(reset&&options.isEmpty())renewOptions();toast(error);}
                 renderCatalogResults();
             });
         },"delneveshte-catalog-browse").start();
@@ -387,50 +385,53 @@ public class MainActivity extends Activity {
     }
     private java.util.List<String> offlinePool(){
         java.util.List<String> result=new ArrayList<>();
-        for(String raw:TextBank.allSuggestions(category,catalogNickname())){
+        for(String raw:TextBank.allSuggestions(activeCategory(),catalogNickname())){
             String rendered=CatalogText.render(raw,catalogNickname());
-            if(rendered!=null&&CatalogSearch.matches(rendered,catalogQuery))result.add(raw);
+            if(rendered!=null&&CatalogSearch.matches(rendered,activeQuery()))result.add(raw);
         }
         return result;
     }
     private void appendLocalPage(){
-        java.util.List<String> rows=store.localCatalogPage(category,catalogQuery,localCatalogOffset,catalogNickname());
-        if(store.localCatalogPage(category,catalogQuery,0,catalogNickname()).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
+        java.util.List<String> rows=store.localCatalogPage(activeCategory(),activeQuery(),localCatalogOffset,catalogNickname());
+        if(store.localCatalogPage(activeCategory(),activeQuery(),0,catalogNickname()).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
         catalogHasMore=rows.size()>20;
         for(int i=0;i<Math.min(20,rows.size());i++)appendOption(rows.get(i));localCatalogOffset+=20;
     }
-    private void renewOptions(){options.clear();credits.clear();localCatalogOffset=0;appendLocalPage();}
+    private void renewOptions(){
+        options.clear();credits.clear();localCatalogOffset=0;searchPending.clear();searchKnown.clear();searchRemoteMore=false;
+        if(liveQuery()){
+            for(int offset=0;;offset+=20){List<String> rows=store.localCatalogPage("همه",catalogQuery,offset,catalogNickname());for(int i=0;i<Math.min(20,rows.size());i++)bufferSearch(rows.get(i));if(rows.size()<=20)break;}
+            for(String raw:offlinePool())bufferSearch(raw);drainSearch(20);
+        }else appendLocalPage();
+    }
 
-    private void editText(String initial) {
-        LinearLayout content = dialogContent();
-        content.addView(body(store.settings().enabled
-                ? "متن را ویرایش کن و به صف اضافه کن؛ در بازهٔ زمانی تنظیم‌شده ارسال می‌شود."
-                : "متن را ویرایش کن و به صف اضافه کن؛ با روشن‌کردن ارسال خودکار، زمان‌بندی می‌شود.", 14));
-        EditText editor = input(initial, "متن پیام", InputType.TYPE_CLASS_TEXT
-                | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        editor.setMinLines(4);
-        editor.setMaxLines(10);
-        editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1200)});
-        content.addView(editor, match());
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("ویرایش پیام")
-                .setView(content)
-                .setPositiveButton("افزودن به صف", null)
-                .setNegativeButton("انصراف", null).create();
-        activeEditor = editor;
-        activeEditorDialog = dialog;
-        dialog.setOnDismissListener(ignored -> {
-            if (activeEditorDialog == dialog) {
-                activeEditor = null;
-                activeEditorDialog = null;
-            }
-        });
-        dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w -> {
-            String text = editor.getText().toString().trim();
-            if (text.isEmpty()) { editor.setError("متن پیام را وارد کن"); return; }
-            if (enqueueMessage(text)) dialog.dismiss();
-        }));
-        dialog.show();
+    private void editText(String initial){
+        LinearLayout content=dialogContent();EditText editor=input(initial,"متن پیام",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        editor.setMinLines(4);editor.setMaxLines(8);editor.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1200)});content.addView(editor,match());
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("ویرایش متن").setView(scrollDialog(content)).setNegativeButton("بستن",null).create();
+        Runnable validate=()->{if(editor.getText().toString().trim().isEmpty())editor.setError("متن پیام را وارد کن");};
+        content.addView(actionButton("ارسال همین حالا",R.drawable.ic_send,false,()->{validate.run();if(!editor.getText().toString().trim().isEmpty())confirmNewSend(editor.getText().toString().trim());}));
+        content.addView(actionButton("ارسال در زمان تصادفی",R.drawable.ic_queue,true,()->{validate.run();String text=editor.getText().toString().trim();if(!text.isEmpty()&&enqueueMessage(text))dialog.dismiss();}));
+        content.addView(actionButton("ارسال در زمان دلخواه",R.drawable.ic_clock,false,()->{validate.run();String text=editor.getText().toString().trim();if(!text.isEmpty())scheduleMessage(text,dialog::dismiss);}));
+        activeEditor=editor;activeEditorDialog=dialog;
+        dialog.setOnDismissListener(v->{if(activeEditorDialog==dialog){activeEditor=null;activeEditorDialog=null;}});dialog.show();
+    }
+    private void scheduleMessage(String text,Runnable saved){
+        ir.delneveshte.app.Settings snapshot=snapshotForAction();if(snapshot==null)return;
+        String sim=simLabel(snapshot.subscriptionId);java.util.Calendar time=java.util.Calendar.getInstance();time.add(java.util.Calendar.HOUR_OF_DAY,1);time.set(java.util.Calendar.SECOND,0);time.set(java.util.Calendar.MILLISECOND,0);
+        LinearLayout content=dialogContent();content.addView(body(text,16));
+        Button date=button("تاریخ: "+new SimpleDateFormat("yyyy/MM/dd",new Locale("fa")).format(time.getTime()),false,()->{});
+        Button clock=button("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()),false,()->{});
+        date.setOnClickListener(v->{DatePickerDialog picker=new DatePickerDialog(this,(view,y,m,d)->{time.set(y,m,d);date.setText("تاریخ: "+new SimpleDateFormat("yyyy/MM/dd",new Locale("fa")).format(time.getTime()));},time.get(java.util.Calendar.YEAR),time.get(java.util.Calendar.MONTH),time.get(java.util.Calendar.DAY_OF_MONTH));picker.getDatePicker().setMinDate(System.currentTimeMillis());picker.show();});
+        clock.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{time.set(java.util.Calendar.HOUR_OF_DAY,h);time.set(java.util.Calendar.MINUTE,m);clock.setText("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()));},time.get(java.util.Calendar.HOUR_OF_DAY),time.get(java.util.Calendar.MINUTE),true).show());
+        content.addView(date);content.addView(clock);content.addView(body("این زمان مستقل از بازه و تعداد ارسال تصادفی است. محدودیت باتری گوشی ممکن است باعث تأخیر شود.",12));
+        if(!store.settings().enabled)content.addView(body("ارسال زمان‌دار متوقف است؛ برای اجرا، ارسال را در تنظیمات روشن کن.",12));
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("زمان ارسال").setView(scrollDialog(content)).setPositiveButton("زمان‌بندی پیام",null).setNegativeButton("انصراف",null).create();
+        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
+            if(time.getTimeInMillis()<=System.currentTimeMillis()){toast("زمانی در آینده انتخاب کن.");return;}
+            try{store.approveFixed(text,snapshot,sim,time.getTimeInMillis());SmsRuntime.reconcile(this);toast("زمان ارسال ذخیره شد.");dialog.dismiss();if(saved!=null)saved.run();}
+            catch(RuntimeException error){toast("زمان‌بندی ذخیره نشد؛ تنظیمات را بررسی کن.");}
+        }));dialog.show();
     }
 
     private ir.delneveshte.app.Settings snapshotForAction() {
@@ -474,8 +475,7 @@ public class MainActivity extends Activity {
         if (snapshot == null) return;
         if (!SmsRuntime.hasSendPermission(this)) { explainSmsPermission(); return; }
         showSendConfirmation(text, snapshot.recipient, snapshot.subscriptionId,
-                simLabel(snapshot.subscriptionId), () -> SmsRuntime.sendNewNow(this, text, snapshot,
-                        simLabel(snapshot.subscriptionId)));
+                simLabel(snapshot.subscriptionId), () -> {SmsRuntime.sendNewNow(this,text,snapshot,simLabel(snapshot.subscriptionId));if(activeEditorDialog!=null)activeEditorDialog.dismiss();});
     }
 
     private void queuePage() {
@@ -486,7 +486,7 @@ public class MainActivity extends Activity {
         info.addView(label(enabled ? "ارسال خودکار روشن است" : "ارسال خودکار متوقف است",
                 16, ROSE, true));
         info.addView(body(enabled
-                ? "زمان‌های زیر تقریبی‌اند. محدودیت باتری گوشی ممکن است زمان اجرا را کمی جابه‌جا کند؛ خارج از بازهٔ مجاز پیام ارسال نمی‌شود."
+                ? "ارسال تصادفی در بازهٔ تنظیمات است؛ زمان دلخواه مستقل از آن اجرا می‌شود. محدودیت باتری ممکن است باعث تأخیر شود."
                 : "متن‌ها محفوظ می‌مانند. برای ارسال تصادفی، در تنظیمات ارسال خودکار را روشن کن.", 14));
         if (!enabled) info.addView(button("رفتن به تنظیمات", false, () -> selectTab(3)));
         page.addView(info);
@@ -497,8 +497,7 @@ public class MainActivity extends Activity {
         }
         for (Message message : queue) {
             LinearLayout c = card(Color.WHITE);
-            c.addView(label(message.plannedAt > 0 && "SCHEDULED".equals(message.status)
-                    ? "زمان تقریبی: " + formatDate(message.plannedAt) : "آمادهٔ زمان‌بندی", 12, ROSE, true));
+            c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0&&"SCHEDULED".equals(message.status)?"زمان تصادفی: "+formatDate(message.plannedAt):"در انتظار زمان تصادفی",12,ROSE,true));
             c.addView(body(message.body, 17));
             c.addView(divider());
             c.addView(phoneLabel(message.recipient));

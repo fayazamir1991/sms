@@ -117,4 +117,14 @@ public class CloudSyncTest {
         assertEquals(first.installationId(),second.installationId());assertEquals(first.credential(),second.credential());
         assertEquals(64,first.credential().length());assertTrue(first.enabled());
     }
+    @Test public void versionTwoUpgradePreservesAnExistingRandomScheduleAndItsIdentity() throws Exception {
+        closeStore();app.deleteDatabase("messages.db");SQLiteDatabase old=app.openOrCreateDatabase("messages.db",0,null);
+        old.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT,body TEXT NOT NULL,recipient TEXT NOT NULL,simLabel TEXT,subscriptionId INTEGER,approvedAt INTEGER,plannedAt INTEGER DEFAULT 0,submittedAt INTEGER DEFAULT 0,status TEXT,detail TEXT DEFAULT '',planDay TEXT DEFAULT '',partCount INTEGER DEFAULT 0,sync_id TEXT,revision INTEGER NOT NULL DEFAULT 1,synced_revision INTEGER NOT NULL DEFAULT 0)");
+        old.execSQL("CREATE TABLE parts(messageId INTEGER,part INTEGER,success INTEGER,PRIMARY KEY(messageId,part))");
+        old.execSQL("CREATE TABLE sync_events(id TEXT PRIMARY KEY,message_id INTEGER NOT NULL REFERENCES messages(id),status TEXT NOT NULL,revision INTEGER NOT NULL,occurred_at INTEGER NOT NULL)");
+        old.execSQL("CREATE TABLE catalog_cache(id TEXT PRIMARY KEY,body TEXT NOT NULL,category TEXT NOT NULL)");old.execSQL("CREATE TABLE catalog_cache_state(category TEXT PRIMARY KEY,updated_at INTEGER NOT NULL)");
+        String identity=UUID.randomUUID().toString();old.execSQL("INSERT INTO messages(id,body,recipient,simLabel,subscriptionId,approvedAt,plannedAt,status,planDay,sync_id,revision,synced_revision) VALUES(21,'کنارت آرامم 💕','+989121234567','SIM',7,1000,999999,'SCHEDULED','2026-11-05',?,4,3)",new Object[]{identity});old.setVersion(2);old.close();
+        AppStore store=new AppStore(app);Message m=store.get(21);assertEquals("SCHEDULED",m.status);assertEquals(999999,m.plannedAt);assertEquals(identity,m.syncId);assertEquals(4,m.revision);assertEquals("RANDOM",m.sendMode);assertEquals(0,m.requestedAt);assertEquals("کنارت آرامم 💕",m.body);assertEquals("+989121234567",m.recipient);assertEquals(7,m.subscriptionId);
+    }
+
 }

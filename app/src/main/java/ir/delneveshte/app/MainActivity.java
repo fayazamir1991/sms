@@ -1122,14 +1122,18 @@ public class MainActivity extends Activity {
     private RippleDrawable controlBackground(int color,int radius,int verticalInset,int border){
         android.graphics.drawable.InsetDrawable content=new android.graphics.drawable.InsetDrawable(shape(color==ACCENT?AppThemeTokens.ACTION_FILL:color,radius,border),0,dp(verticalInset),0,dp(verticalInset));
         android.graphics.drawable.InsetDrawable mask=new android.graphics.drawable.InsetDrawable(shape(Color.WHITE,radius,0),0,dp(verticalInset),0,dp(verticalInset));
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask);
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask){
+            @Override public boolean getPadding(android.graphics.Rect rect){rect.set(0,0,0,0);return false;}
+        };
     }
     private RippleDrawable iconBackground(int color,int visualSize){
         android.graphics.drawable.LayerDrawable content=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{shape(color==ACCENT?AppThemeTokens.ACTION_FILL:color,visualSize/2,0)});
         content.setLayerSize(0,dp(visualSize),dp(visualSize));content.setLayerGravity(0,Gravity.CENTER);
         android.graphics.drawable.LayerDrawable mask=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{shape(Color.WHITE,visualSize/2,0)});
         mask.setLayerSize(0,dp(visualSize),dp(visualSize));mask.setLayerGravity(0,Gravity.CENTER);
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask);
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(28,129,114,181)),content,mask){
+            @Override public boolean getPadding(android.graphics.Rect rect){rect.set(0,0,0,0);return false;}
+        };
     }
 
     private RippleDrawable ripple(int color, int radius) {

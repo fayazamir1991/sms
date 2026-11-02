@@ -43,11 +43,16 @@ public class UiControlsTest {
         if(v instanceof ImageButton){ImageButton b=(ImageButton)v;assertEquals(ImageView.ScaleType.CENTER_INSIDE,b.getScaleType());assertEquals(b.getLayoutParams().width,b.getLayoutParams().height);assertTrue(b.getMinimumWidth()>=48*app.getResources().getDisplayMetrics().density);assertNotNull(b.getContentDescription());}
         if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)checkIconButtons(g.getChildAt(i));}
     }
+    private static class TextViewCheck {
+        static void assertChipSpacing(android.widget.TextView chip,float density){assertTrue(chip.getPaddingLeft()>=Math.round(12*density));assertTrue(chip.getPaddingRight()>=Math.round(12*density));}
+    }
     @Test public void searchClearHasASquareTouchTargetAndClearsLiveResults(){
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
-            MainActivity a=c.get();View home=a.getWindow().getDecorView();checkIconButtons(home);CatalogBrowsingTest.text(home,"جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();
+            MainActivity a=c.get();View home=a.getWindow().getDecorView();checkIconButtons(home);
+            TextViewCheck.assertChipSpacing(CatalogBrowsingTest.text(home,"همه"),app.getResources().getDisplayMetrics().density);CatalogBrowsingTest.text(home,"جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();
             View root=a.getWindow().getDecorView();checkIconButtons(root);EditText field=CatalogBrowsingTest.search(root);field.setText("zzzz");shadowOf(Looper.getMainLooper()).idle();
-            View clear=CatalogBrowsingTest.described(root,"پاک‌کردن جست‌وجو");assertTrue(clear.isEnabled());int size=Math.round(48*app.getResources().getDisplayMetrics().density);clear.measure(View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY));clear.layout(0,0,size,size);
+            View clear=CatalogBrowsingTest.described(root,"پاک‌کردن جست‌وجو");assertTrue(clear.isEnabled());
+            View fieldContainer=(View)clear.getParent();assertEquals(0,fieldContainer.getPaddingTop());assertEquals(0,fieldContainer.getPaddingBottom());int size=Math.round(48*app.getResources().getDisplayMetrics().density);clear.measure(View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY));clear.layout(0,0,size,size);
             long now=android.os.SystemClock.uptimeMillis();android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,2,2,0),up=android.view.MotionEvent.obtain(now,now+10,android.view.MotionEvent.ACTION_UP,2,2,0);
             assertTrue(clear.dispatchTouchEvent(down));assertTrue(clear.dispatchTouchEvent(up));down.recycle();up.recycle();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());
         }

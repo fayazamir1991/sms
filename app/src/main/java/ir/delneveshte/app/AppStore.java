@@ -98,6 +98,13 @@ public final class AppStore {
                 v.put("body",body);v.put("recipient",s.recipient);v.put("subscriptionId",s.subscriptionId);
                 v.put("sendMode",mode);v.put("requestedAt",requestedAt);
                 if(requestedAt>0)v.put("plannedAt",requestedAt);
+                if("RANDOM".equals(mode)){
+                    java.util.Map<String,Integer> used=randomReservations(now);
+                    java.util.Set<Long> occupied=new java.util.HashSet<>();
+                    for(Message m:queue())if(m.plannedAt>now)occupied.add(m.plannedAt);
+                    long at=SchedulePlanner.next(java.time.ZoneId.systemDefault(),s.startMinute,s.endMinute,s.dailyCount,now,used,occupied,new java.security.SecureRandom());
+                    v.put("plannedAt",at);v.put("planDay",dayOf(at));
+                }
                 v.put("simLabel",label);v.put("approvedAt",now);v.put("sync_id",UUID.randomUUID().toString());
                 id=db.insertOrThrow("messages",null,v);event(db,id,state,1,now);db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
@@ -122,7 +129,7 @@ public final class AppStore {
         }
     }
     public Message get(long id) { List<Message> rows=list("id="+id,"id");return rows.isEmpty()?null:rows.get(0); }
-    public List<Message> queue() { return list("status IN ('APPROVED','SCHEDULED')","approvedAt,id"); }
+    public List<Message> queue() { return list("status IN ('APPROVED','SCHEDULED')","plannedAt,id"); }
     public List<Message> history() { return list("status NOT IN ('APPROVED','SCHEDULED')","id DESC LIMIT 100"); }
     public List<Message> unscheduled() { return list("status='APPROVED' AND sendMode='RANDOM'","approvedAt,id"); }
     public List<Message> scheduled() { return list("status='SCHEDULED'","plannedAt,id"); }
@@ -152,8 +159,51 @@ public final class AppStore {
         mutate(v,"status='SCHEDULED' AND sendMode='RANDOM'",null);
     }
     public void requeueFuture() {
-        requeueRandom();
-        mutate(values("APPROVED","ارسال زمان‌دار متوقف است؛ زمان انتخاب‌شده حفظ شد."),"status='SCHEDULED' AND sendMode='FIXED'",null);
+        // Pause execution without discarding the times already shown to the user.
+        mutate(values("APPROVED","ارسال زمان‌دار متوقف است؛ زمان ارسال حفظ شد."),"status='SCHEDULED'",null);
+    }
+    private static String dayOf(long at){return java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString();}
+    private java.util.Map<String,Integer> attemptedReservations(){
+        java.util.Map<String,Integer> used=new java.util.HashMap<>();
+        try(Cursor c=db.rawQuery("SELECT planDay,COUNT(*) FROM messages WHERE submittedAt>0 AND sendMode='RANDOM' GROUP BY planDay",null)){
+            while(c.moveToNext())used.put(c.getString(0),c.getInt(1));
+        }return used;
+    }
+    private java.util.Map<String,Integer> randomReservations(long now){
+        java.util.Map<String,Integer> used=attemptedReservations();
+        for(Message m:queue())if("RANDOM".equals(m.sendMode)&&m.plannedAt>now){String day=dayOf(m.plannedAt);used.put(day,used.getOrDefault(day,0)+1);}
+        return used;
+    }
+    /** Repair legacy/unassigned or expired random slots, preserving every valid future reservation. */
+    public void ensureRandomSchedules(long now){
+        synchronized(LOCK){
+            Settings s=settings();if(!s.valid())return;
+            db.beginTransaction();try{
+                java.time.ZoneId zone=java.time.ZoneId.systemDefault();
+                java.util.Map<String,Integer> used=attemptedReservations();java.util.Set<Long> occupied=new java.util.HashSet<>();
+                List<Message> pending=list("status IN ('APPROVED','SCHEDULED') AND sendMode='RANDOM'","plannedAt,id");
+                List<Message> repair=new ArrayList<>();
+                for(Message m:pending){
+                    java.time.ZonedDateTime time=java.time.Instant.ofEpochMilli(m.plannedAt).atZone(zone);
+                    String day=time.toLocalDate().toString();int minute=time.getHour()*60+time.getMinute();
+                    if(m.plannedAt<=now||minute<s.startMinute||minute>=s.endMinute||used.getOrDefault(day,0)>=s.dailyCount||!occupied.add(m.plannedAt)){repair.add(m);continue;}
+                    used.put(day,used.getOrDefault(day,0)+1);
+                    if(s.enabled&&!"SCHEDULED".equals(m.status))schedule(m.id,m.plannedAt,day);
+                }
+                for(Message m:repair){
+                    long at=SchedulePlanner.next(zone,s.startMinute,s.endMinute,s.dailyCount,now,used,occupied,new java.security.SecureRandom());
+                    ContentValues v=values(s.enabled?"SCHEDULED":"APPROVED","");v.put("plannedAt",at);v.put("planDay",dayOf(at));
+                    mutate(v,"id=? AND status IN ('APPROVED','SCHEDULED')",new String[]{""+m.id});
+                }
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
+        }
+    }
+    /** Revision check prevents a stale editor from changing a sent/cancelled/replanned message. */
+    public boolean rescheduleFixed(long id,long revision,long at){
+        if(at<=System.currentTimeMillis())throw new IllegalArgumentException("زمان ارسال باید در آینده باشد.");
+        ContentValues v=values("APPROVED","");v.put("sendMode","FIXED");v.put("requestedAt",at);v.put("plannedAt",at);v.put("planDay",dayOf(at));
+        return mutate(v,"id=? AND revision=? AND submittedAt=0 AND status IN ('APPROVED','SCHEDULED')",new String[]{""+id,""+revision})==1;
     }
     public List<Message> randomScheduled(){return list("status='SCHEDULED' AND sendMode='RANDOM'","plannedAt,id");}
     public List<Message> fixedQueue(){return list("status IN ('APPROVED','SCHEDULED') AND sendMode='FIXED'","requestedAt,id");}

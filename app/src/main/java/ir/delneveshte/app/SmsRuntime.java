@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 
 /** Android integration. A queued message's body, destination and SIM are never rewritten. */
 public final class SmsRuntime {
@@ -37,7 +36,6 @@ public final class SmsRuntime {
     private static final int NOTICE_ID = 402;
     private static final long MINUTE = 60_000L;
     static final long FIXED_GRACE=30*MINUTE;
-    private static final Random RANDOM = new java.security.SecureRandom();
 
     private SmsRuntime() { }
 
@@ -132,6 +130,7 @@ public final class SmsRuntime {
     }
 
     private static void reconcileLocked(Context app, AppStore store, long now) {
+        store.ensureRandomSchedules(now);
         Settings settings = store.settings();
         if (!settings.enabled) {
             cancelAlarm(app);
@@ -143,8 +142,7 @@ public final class SmsRuntime {
             notifyStatus(app, "ارسال نیاز به بررسی دارد", problem);
             return;
         }
-        ZoneId zone=ZoneId.systemDefault();LocalDate today=Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
-        String day=today.toString();long end=atMinute(today,zone,settings.endMinute);
+        ZoneId zone=ZoneId.systemDefault();
         for(Message m:store.fixedQueue()){
             if(("APPROVED".equals(m.status)&&m.requestedAt<=now)||now>m.requestedAt+FIXED_GRACE){
                 store.failBeforeSend(m.id,"زمان انتخاب‌شده گذشته است؛ پیام خودکار به زمان دیگری منتقل نمی‌شود.");
@@ -152,19 +150,18 @@ public final class SmsRuntime {
                 store.schedule(m.id,m.requestedAt,Instant.ofEpochMilli(m.requestedAt).atZone(zone).toLocalDate().toString());
             }
         }
-        for(Message m:store.randomScheduled())if(!day.equals(m.planDay)||now>=end){store.requeueRandom();break;}
-        int quota=Math.max(0,settings.dailyCount-store.attemptedOn(day));
-        List<Message> random=store.randomScheduled();
-        if(quota==0||random.size()>quota){store.requeueRandom();random=store.randomScheduled();}
-        if(random.isEmpty()&&quota>0&&now<end){
-            List<Message> approved=store.unscheduled();int count=Math.min(quota,approved.size());
-            List<Long> times=SchedulePlanner.plan(today,zone,settings.startMinute,settings.endMinute,count,now,RANDOM);
-            for(int i=0;i<times.size();i++)store.schedule(approved.get(i).id,times.get(i),day);
-        }
         List<Message> scheduled=store.scheduled();
         long next=scheduled.isEmpty()?Long.MAX_VALUE:scheduled.get(0).plannedAt;
-        if(!store.unscheduled().isEmpty())next=Math.min(next,atMinute(today.plusDays(1),zone,settings.startMinute));
         if(next!=Long.MAX_VALUE)arm(app,Math.max(now+1000,next));else cancelAlarm(app);
+    }
+
+    /** Serialize edits with alarm sending; a cancelled or already claimed item cannot be edited. */
+    public static boolean rescheduleQueued(Context context,long id,long revision,long at){
+        synchronized(LOCK){
+            Context app=context.getApplicationContext();AppStore store=new AppStore(app);
+            if(!store.rescheduleFixed(id,revision,at))return false;
+            reconcileLocked(app,store,System.currentTimeMillis());return true;
+        }
     }
 
     /** Invoked exclusively by our alarm PendingIntent. Sends at most one delayed message per wake. */

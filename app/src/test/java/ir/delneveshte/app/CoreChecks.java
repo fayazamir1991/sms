@@ -22,9 +22,18 @@ public class CoreChecks {
     }
    }
   }
+  for(String name:new String[]{"Asia/Tehran","Europe/Berlin","UTC"}){
+   ZoneId zone=ZoneId.of(name);long now=LocalDate.of(2026,10,25).atTime(23,30).atZone(zone).toInstant().toEpochMilli();
+   Map<String,Integer> used=new HashMap<>();Set<Long> occupied=new HashSet<>();Random rng=new Random(42);
+   for(int n=0;n<101;n++){
+    long at=SchedulePlanner.next(zone,540,1260,3,now,used,occupied,rng);ZonedDateTime t=Instant.ofEpochMilli(at).atZone(zone);
+    if(at<=now||t.getHour()<9||t.getHour()>=21||used.get(t.toLocalDate().toString())>3)throw new AssertionError("invalid reservation");
+   }
+   if(occupied.size()!=101||used.size()!=34)throw new AssertionError("reservation duplicates or overflow");
+  }
   Settings s=new Settings();if(s.valid())throw new AssertionError("missing settings allowed");
   s.recipient="+989121234567";s.subscriptionId=1;if(!s.valid())throw new AssertionError("valid settings rejected");
   s.endMinute=s.startMinute;if(s.valid())throw new AssertionError("invalid time allowed");
-  System.out.println("PASS: 3000 schedule scenarios, 600 candidate batches, settings validation");
+  System.out.println("PASS: 3000 schedule scenarios, 600 candidate batches, settings validation, multi-day reservations");
  }
 }

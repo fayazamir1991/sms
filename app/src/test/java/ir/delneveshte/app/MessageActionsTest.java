@@ -117,4 +117,66 @@ public class MessageActionsTest {
         store.claim(id,at+1000,1);assertEquals(0,store.attemptedOn(day));
     }
 
+
+    @Test public void everyRandomApprovalHasATimeWhilePausedAndOverflowUsesFutureDays() {
+        settings.dailyCount=2;settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);
+        long now=System.currentTimeMillis();java.util.Map<String,Integer> days=new java.util.HashMap<>();
+        for(int n=0;n<7;n++){
+            Message m=store.get(store.approve("عشق من "+n,settings,"SIM"));assertTrue(m.plannedAt>now);assertEquals("APPROVED",m.status);
+            String day=java.time.Instant.ofEpochMilli(m.plannedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString();days.put(day,days.getOrDefault(day,0)+1);
+            assertEquals(day,m.planDay);
+        }
+        assertTrue(days.size()>=4);for(int count:days.values())assertTrue(count<=2);
+        java.util.Map<Long,Long> before=new java.util.HashMap<>();for(Message m:store.queue())before.put(m.id,m.plannedAt);
+        SmsRuntime.reconcile(RuntimeEnvironment.getApplication());SmsRuntime.pause(RuntimeEnvironment.getApplication());
+        for(Message m:store.queue())assertEquals((long)before.get(m.id),m.plannedAt);
+        store.approve("پیام تازه",settings,"SIM");for(Message m:store.queue())if(before.containsKey(m.id))assertEquals((long)before.get(m.id),m.plannedAt);
+    }
+    @Test public void attemptedRandomSlotsCountTowardFutureReservationsButFixedMessagesDoNot(){
+        settings.dailyCount=1;settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);
+        long first=store.approve("پیام اول",settings,"SIM");Message m=store.get(first);store.schedule(first,m.plannedAt,m.planDay);assertTrue(store.claim(first,m.plannedAt,1));
+        store.approveFixed("قرار دلخواه",settings,"SIM",m.plannedAt+1000);
+        Message next=store.get(store.approve("پیام بعدی",settings,"SIM"));assertTrue(next.planDay.compareTo(m.planDay)>0);
+    }
+    @Test public void queueTimeEditIsAtomicAndPreservesSnapshotAndSyncIdentity() throws Exception {
+        long id=store.approve("همان متن تأییدشده ❤️",settings,"SIM 1");Message old=store.get(id);long at=System.currentTimeMillis()+4*3600_000;
+        Settings changed=settings.copy();changed.recipient="+989351234567";changed.subscriptionId=8;store.saveSettings(changed);
+        assertTrue(SmsRuntime.rescheduleQueued(RuntimeEnvironment.getApplication(),id,old.revision,at));Message edited=store.get(id);
+        assertEquals("FIXED",edited.sendMode);assertEquals(at,edited.plannedAt);assertEquals(at,edited.requestedAt);assertEquals(old.body,edited.body);assertEquals(old.recipient,edited.recipient);assertEquals(old.subscriptionId,edited.subscriptionId);assertEquals(old.syncId,edited.syncId);assertEquals(old.approvedAt,edited.approvedAt);assertEquals(old.revision+1,edited.revision);
+        org.json.JSONObject payload=store.pendingSync(10).getJSONObject(0);assertEquals(at,payload.getLong("planned_at"));assertEquals(at,payload.getLong("requested_at"));
+        assertFalse(store.rescheduleFixed(id,old.revision,at+1000));assertEquals(at,store.get(id).plannedAt);
+        assertTrue(store.cancel(id));assertFalse(store.rescheduleFixed(id,store.get(id).revision,at+1000));
+        long sent=store.approve("در حال ارسال",settings,"SIM");Message sending=store.get(sent);store.schedule(sent,sending.plannedAt,sending.planDay);store.claim(sent,System.currentTimeMillis(),1);assertFalse(store.rescheduleFixed(sent,store.get(sent).revision,at));
+    }
+    @Test public void legacyUnassignedAndExpiredRandomRowsGetTimesWithoutMovingValidFutureRows() throws Exception {
+        settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);
+        long valid=store.approve("زمان معتبر",settings,"SIM"), legacy=store.approve("قدیمی",settings,"SIM"), expired=store.approve("عقب افتاده",settings,"SIM");long keep=store.get(valid).plannedAt;
+        Field field=AppStore.class.getDeclaredField("db");field.setAccessible(true);SQLiteDatabase db=(SQLiteDatabase)field.get(null);
+        db.execSQL("UPDATE messages SET plannedAt=0,planDay='' WHERE id=?",new Object[]{legacy});db.execSQL("UPDATE messages SET plannedAt=? WHERE id=?",new Object[]{System.currentTimeMillis()-1000,expired});
+        store.ensureRandomSchedules(System.currentTimeMillis());assertEquals(keep,store.get(valid).plannedAt);assertTrue(store.get(legacy).plannedAt>System.currentTimeMillis());assertTrue(store.get(expired).plannedAt>System.currentTimeMillis());
+        long revision=store.get(legacy).revision;store.ensureRandomSchedules(System.currentTimeMillis());assertEquals(revision,store.get(legacy).revision);
+    }
+    @Test public void queueEditorCancelChangesNothingAndSavingChangesTheSameMessage() throws Exception {
+        settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);long id=store.approve("پیام صف ❤️",settings,"SIM");
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();Message before=store.get(id);
+            CatalogBrowsingTest.text(root(a),"ویرایش زمان ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(before.revision,store.get(id).revision);
+            CatalogBrowsingTest.text(root(a),"ویرایش زمان ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
+            assertEquals(1,store.queue().size());assertEquals(id,store.queue().get(0).id);assertEquals("FIXED",store.get(id).sendMode);assertEquals(before.plannedAt,store.get(id).requestedAt);
+        }
+    }
+
+    @Test public void queueCardTapAndLongPressOpenActionsWithConfirmationForSendingAndRemoval() throws Exception {
+        String text="پیام صف برای منو ❤️";long id=store.approve(text,settings,"SIM");
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();
+            View body=CatalogBrowsingTest.text(root(a),text);assertTrue(body.performLongClick());shadowOf(Looper.getMainLooper()).idle();
+            android.widget.PopupMenu menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertEquals(4,menu.getMenu().size());
+            assertTrue(menu.getMenu().performIdentifierAction(4,0));assertEquals(text,((android.content.ClipboardManager)a.getSystemService(Context.CLIPBOARD_SERVICE)).getPrimaryClip().getItemAt(0).getText().toString());
+            body.performClick();shadowOf(Looper.getMainLooper()).idle();menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertTrue(menu.getMenu().performIdentifierAction(2,0));shadowOf(Looper.getMainLooper()).idle();
+            AlertDialog confirm=ShadowAlertDialog.getLatestAlertDialog();assertTrue(confirm.isShowing());confirm.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(store.history().isEmpty());assertNotNull(store.get(id));
+            body.performClick();shadowOf(Looper.getMainLooper()).idle();menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertTrue(menu.getMenu().performIdentifierAction(3,0));shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(1,store.queue().size());
+            body.performClick();shadowOf(Looper.getMainLooper()).idle();menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertTrue(menu.getMenu().performIdentifierAction(1,0));shadowOf(Looper.getMainLooper()).idle();assertTrue(ShadowAlertDialog.getLatestAlertDialog().isShowing());assertEquals(1,store.queue().size());
+        }
+    }
 }

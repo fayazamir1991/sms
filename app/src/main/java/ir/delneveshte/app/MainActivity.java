@@ -139,7 +139,7 @@ public class MainActivity extends Activity {
             draft.enabled = false;
         }
         // Android removes alarms on force-stop; reopening restores the approved schedule.
-        if (store.settings().enabled) SmsRuntime.reconcile(this);
+        SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
         if(options.isEmpty()&&(!catalogRequested||usingOfflineCatalog))renewOptions();
         render();
@@ -427,9 +427,12 @@ public class MainActivity extends Activity {
         activeEditor=editor;activeEditorDialog=dialog;
         dialog.setOnDismissListener(v->{if(activeEditorDialog==dialog){activeEditor=null;activeEditorDialog=null;}});dialog.show();
     }
-    private void scheduleMessage(String text,Runnable saved){
-        ir.delneveshte.app.Settings snapshot=snapshotForAction();if(snapshot==null)return;
-        String sim=simLabel(snapshot.subscriptionId);java.util.Calendar time=java.util.Calendar.getInstance();time.add(java.util.Calendar.HOUR_OF_DAY,1);time.set(java.util.Calendar.SECOND,0);time.set(java.util.Calendar.MILLISECOND,0);
+    private void scheduleMessage(String text,Runnable saved){scheduleMessage(text,saved,null);}
+    private void scheduleMessage(String text,Runnable saved,Message queued){
+        ir.delneveshte.app.Settings snapshot=queued==null?snapshotForAction():null;if(queued==null&&snapshot==null)return;
+        String sim=queued==null?simLabel(snapshot.subscriptionId):queued.simLabel;java.util.Calendar time=java.util.Calendar.getInstance();
+        if(queued!=null&&queued.plannedAt>System.currentTimeMillis())time.setTimeInMillis(queued.plannedAt);
+        else {time.add(java.util.Calendar.HOUR_OF_DAY,1);time.set(java.util.Calendar.SECOND,0);time.set(java.util.Calendar.MILLISECOND,0);}
         LinearLayout content=dialogContent();content.addView(body(text,16));
         Button date=button("تاریخ: "+new SimpleDateFormat("yyyy/MM/dd",new Locale("fa")).format(time.getTime()),false,()->{});
         Button clock=button("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()),false,()->{});
@@ -437,10 +440,14 @@ public class MainActivity extends Activity {
         clock.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{time.set(java.util.Calendar.HOUR_OF_DAY,h);time.set(java.util.Calendar.MINUTE,m);clock.setText("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()));},time.get(java.util.Calendar.HOUR_OF_DAY),time.get(java.util.Calendar.MINUTE),true).show());
         content.addView(date);content.addView(clock);content.addView(body("این زمان مستقل از بازه و تعداد ارسال تصادفی است. محدودیت باتری گوشی ممکن است باعث تأخیر شود.",12));
         if(!store.settings().enabled)content.addView(body("ارسال زمان‌دار متوقف است؛ برای اجرا، ارسال را در تنظیمات روشن کن.",12));
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("زمان ارسال").setView(scrollDialog(content)).setPositiveButton("زمان‌بندی پیام",null).setNegativeButton("انصراف",null).create();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(queued==null?"زمان ارسال":"ویرایش زمان ارسال").setView(scrollDialog(content)).setPositiveButton(queued==null?"زمان‌بندی پیام":"ذخیرهٔ زمان",null).setNegativeButton("انصراف",null).create();
         dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
             if(time.getTimeInMillis()<=System.currentTimeMillis()){toast("زمانی در آینده انتخاب کن.");return;}
-            try{store.approveFixed(text,snapshot,sim,time.getTimeInMillis());SmsRuntime.reconcile(this);toast("زمان ارسال ذخیره شد.");dialog.dismiss();if(saved!=null)saved.run();}
+            try{
+                if(queued==null){store.approveFixed(text,snapshot,sim,time.getTimeInMillis());SmsRuntime.reconcile(this);}
+                else if(!SmsRuntime.rescheduleQueued(this,queued.id,queued.revision,time.getTimeInMillis())){toast("وضعیت پیام تغییر کرده؛ صف را دوباره بررسی کن.");dialog.dismiss();render();return;}
+                toast("زمان ارسال ذخیره شد.");dialog.dismiss();if(saved!=null)saved.run();
+            }
             catch(RuntimeException error){toast("زمان‌بندی ذخیره نشد؛ تنظیمات را بررسی کن.");}
         }));dialog.show();
     }
@@ -462,8 +469,9 @@ public class MainActivity extends Activity {
     private boolean enqueueMessage(String text) {
         ir.delneveshte.app.Settings snapshot = snapshotForAction();
         if (snapshot == null) return false;
+        final long queuedId;
         try {
-            store.approve(text, snapshot, simLabel(snapshot.subscriptionId));
+            queuedId=store.approve(text, snapshot, simLabel(snapshot.subscriptionId));
         } catch (RuntimeException error) {
             toast("پیام ذخیره نشد؛ دوباره تلاش کن.");
             return false;
@@ -471,12 +479,12 @@ public class MainActivity extends Activity {
         if (store.settings().enabled) {
             try {
                 SmsRuntime.reconcile(this);
-                toast("به صف اضافه شد؛ در بازهٔ انتخابی ارسال می‌شود.");
+                toast("به صف اضافه شد؛ زمان ارسال: "+formatDate(store.get(queuedId).plannedAt));
             } catch (RuntimeException error) {
                 toast("به صف اضافه شد؛ زمان‌بندی نیاز به بررسی دارد.");
             }
         } else {
-            toast("به صف اضافه شد؛ برای ارسال، ارسال خودکار را روشن کن.");
+            toast("زمان ارسال: "+formatDate(store.get(queuedId).plannedAt)+"؛ ارسال خودکار متوقف است.");
         }
         return true;
     }
@@ -490,6 +498,7 @@ public class MainActivity extends Activity {
     }
 
     private void queuePage() {
+        store.ensureRandomSchedules(System.currentTimeMillis());
         List<Message> queue = store.queue();
         heading("صف پیام‌های تو", fa(queue.size()) + " پیام تأییدشده");
         boolean enabled = store.settings().enabled;
@@ -497,8 +506,8 @@ public class MainActivity extends Activity {
         info.addView(label(enabled ? "ارسال خودکار روشن است" : "ارسال خودکار متوقف است",
                 16, ACCENT, true));
         info.addView(body(enabled
-                ? "ارسال تصادفی در بازهٔ تنظیمات است؛ زمان دلخواه مستقل از آن اجرا می‌شود. محدودیت باتری ممکن است باعث تأخیر شود."
-                : "متن‌ها محفوظ می‌مانند. برای ارسال تصادفی، در تنظیمات ارسال خودکار را روشن کن.", 14));
+                ? "زمان همهٔ پیام‌ها مشخص است. با «ویرایش زمان ارسال» می‌توانی برای هر پیام زمان دلخواه انتخاب کنی. محدودیت باتری ممکن است باعث تأخیر شود."
+                : "زمان پیام‌ها محفوظ است، اما تا روشن‌کردن ارسال خودکار پیامکی ارسال نمی‌شود. زمان‌های تصادفی گذشته هنگام فعال‌سازی دوباره تنظیم می‌شوند.", 14));
         if (!enabled) info.addView(button("رفتن به تنظیمات", false, () -> selectTab(3)));
         page.addView(info);
         if (queue.isEmpty()) {
@@ -508,8 +517,11 @@ public class MainActivity extends Activity {
         }
         for (Message message : queue) {
             LinearLayout c = messageCard();
-            c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0&&"SCHEDULED".equals(message.status)?"زمان تصادفی: "+formatDate(message.plannedAt):"در انتظار زمان تصادفی",12,ACCENT,true));
-            c.addView(body(message.body, 17));
+            c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0?"زمان تصادفی: "+formatDate(message.plannedAt):"تنظیمات زمان‌بندی را کامل کن",12,ACCENT,true));
+            TextView messageText=body(message.body,17);
+            c.setOnClickListener(v->queueMessageMenu(c,message));c.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});c.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
+            messageText.setOnClickListener(v->queueMessageMenu(c,message));messageText.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});messageText.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
+            c.addView(messageText);
             c.addView(divider());
             c.addView(phoneLabel(message.recipient));
             c.addView(label(message.simLabel, 12, MUTED, false));
@@ -517,6 +529,7 @@ public class MainActivity extends Activity {
                     || message.subscriptionId != store.settings().subscriptionId) {
                 c.addView(body("این پیام با مقصد و سیم‌کارت زمان تأیید ارسال می‌شود؛ تنظیمات تازه آن را تغییر نداده است.", 12));
             }
+            add(c,actionButton("ویرایش زمان ارسال",R.drawable.ic_clock,false,()->scheduleMessage(message.body,this::render,message)),12,0);
             LinearLayout actions = horizontal();
             Button sendNow = actionButton("ارسال فوری", R.drawable.ic_send, false, () -> confirmSendNow(message));
             Button cancel = button("حذف از صف", false, () -> cancelMessage(message));
@@ -527,6 +540,25 @@ public class MainActivity extends Activity {
             add(c, actions, 12, 0);
             page.addView(c);
         }
+    }
+
+    private void queueMessageMenu(View anchor,Message message){
+        android.widget.PopupMenu menu=new android.widget.PopupMenu(this,anchor);
+        menu.getMenu().add(0,1,0,"ویرایش زمان ارسال").setIcon(R.drawable.ic_clock);
+        menu.getMenu().add(0,2,1,"ارسال همین حالا").setIcon(R.drawable.ic_send);
+        menu.getMenu().add(0,3,2,"حذف از صف").setIcon(R.drawable.ic_close);
+        menu.getMenu().add(0,4,3,"کپی متن").setIcon(R.drawable.ic_copy);
+        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==0?AppThemeTokens.GOLD_INK:ACCENT);}
+        if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
+        menu.setOnMenuItemClickListener(item->{
+            switch(item.getItemId()){
+                case 1:scheduleMessage(message.body,this::render,message);break;
+                case 2:confirmSendNow(message);break;
+                case 3:cancelMessage(message);break;
+                case 4:((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("پیام",message.body));toast("متن کپی شد.");break;
+                default:return false;
+            }return true;
+        });menu.show();
     }
 
     private void cancelMessage(Message message) {
@@ -772,6 +804,7 @@ public class MainActivity extends Activity {
             draft.enabled = false;
         }
         store.saveSettings(draft.copy());
+        store.ensureRandomSchedules(System.currentTimeMillis());
         store.requeueFuture();
         if (draft.enabled) SmsRuntime.reconcile(this);
         else SmsRuntime.pause(this);

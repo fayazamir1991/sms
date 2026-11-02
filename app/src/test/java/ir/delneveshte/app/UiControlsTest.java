@@ -79,12 +79,12 @@ public class UiControlsTest {
         if(v instanceof android.widget.Button){android.widget.Button b=(android.widget.Button)v;assertNotNull(b.getLayout());assertTrue("Clipped button: "+b.getText(),b.getHeight()-b.getCompoundPaddingTop()-b.getCompoundPaddingBottom()>=b.getLayout().getHeight());}
         if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)checkTextButtonsFit(g.getChildAt(i));}
     }
-    @Test public void narrowScreenAndLargeSystemFontKeepLabelsVisibleAndNavigationBelowContent() throws Exception {
+    @Test @Config(qualifiers="w320dp-h640dp") public void narrowScreenAndLargeSystemFontKeepLabelsVisibleAndNavigationBelowContent() throws Exception {
         android.content.res.Resources resources=app.getResources();android.content.res.Configuration config=new android.content.res.Configuration(resources.getConfiguration());config.fontScale=1.6f;resources.updateConfiguration(config,resources.getDisplayMetrics());
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();CatalogBrowsingTest.text(a.getWindow().getDecorView(),"تنظیمات").performClick();shadowOf(Looper.getMainLooper()).idle();View root=a.getWindow().getDecorView();float density=resources.getDisplayMetrics().density;int w=Math.round(320*density),h=Math.round(640*density);
             root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);checkTextButtonsFit(root);
-            View nav=(View)CatalogBrowsingTest.text(root,"پیشنهادها").getParent().getParent().getParent();Field scroll=MainActivity.class.getDeclaredField("pageScroll");scroll.setAccessible(true);View content=(View)scroll.get(a);Rect contentRect=new Rect(),navRect=new Rect();assertTrue(content.getGlobalVisibleRect(contentRect));assertTrue(nav.getGlobalVisibleRect(navRect));assertTrue("Navigation overlaps content",contentRect.bottom<=navRect.top);
+            View nav=(View)CatalogBrowsingTest.text(root,"پیشنهادها").getParent().getParent().getParent();Field scroll=MainActivity.class.getDeclaredField("pageScroll");scroll.setAccessible(true);View content=(View)scroll.get(a);Rect contentRect=new Rect(),navRect=new Rect();assertTrue("Content is outside the test window",content.getGlobalVisibleRect(contentRect));assertTrue("Navigation is outside the test window",nav.getGlobalVisibleRect(navRect));assertTrue("Navigation overlaps content",contentRect.bottom<=navRect.top);
         }
     }
 }

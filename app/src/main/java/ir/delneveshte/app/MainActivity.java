@@ -9,7 +9,6 @@ import android.widget.ImageView;
 import android.widget.FrameLayout;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -22,7 +21,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
-import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -47,7 +45,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-/** Local approvals and optional cloud synchronization. No SMS is sent on launch. */
+/** Local approvals and automatic cloud synchronization. No SMS is sent on launch. */
 public class MainActivity extends Activity {
     private static final int BG=AppThemeTokens.BACKGROUND;
     private static final int INK=AppThemeTokens.TEXT;
@@ -112,7 +110,6 @@ public class MainActivity extends Activity {
             catalogSearchDraft=savedInstanceState.getString("catalog_search_draft",catalogQuery);
             category = savedInstanceState.getString("category", category);
             draft.recipient = savedInstanceState.getString("draft_recipient", draft.recipient);
-            draft.nickname = savedInstanceState.getString("draft_nickname", draft.nickname);
             draft.dailyCount = savedInstanceState.getInt("draft_count", draft.dailyCount);
             draft.startMinute = savedInstanceState.getInt("draft_start", draft.startMinute);
             draft.endMinute = savedInstanceState.getInt("draft_end", draft.endMinute);
@@ -167,7 +164,6 @@ public class MainActivity extends Activity {
         state.putInt("tab", currentTab);
         state.putString("category", category);
         state.putString("draft_recipient", draft.recipient);
-        state.putString("draft_nickname", draft.nickname);
         state.putInt("draft_count", draft.dailyCount);
         state.putInt("draft_start", draft.startMinute);
         state.putInt("draft_end", draft.endMinute);
@@ -218,7 +214,7 @@ public class MainActivity extends Activity {
     private View appHeader(){
         if(currentTab==4)return searchToolbar();
         LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(18),0,dp(12),0);bar.setMinimumHeight(dp(64));
-        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.COMPLEMENT_INK);brand.setBackground(shape(AppThemeTokens.SOFT_COMPLEMENT,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
+        ImageView brand=new ImageView(this);brand.setScaleType(ImageView.ScaleType.CENTER_INSIDE);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.COMPLEMENT_INK);brand.setBackground(shape(AppThemeTokens.SOFT_COMPLEMENT,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
         LinearLayout title=vertical();String name=currentTab==0?"دل‌نوشته":currentTab==1?"صف ارسال":currentTab==2?"سابقه":"تنظیمات";
         title.addView(label(name,21,INK,true));
         boolean active=store.settings().enabled;String status=active?"ارسال فعال":"ارسال متوقف";
@@ -240,13 +236,13 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
         });
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
-        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(0,dp(48),1);inputParams.setMargins(dp(8),0,dp(8),0);bar.addView(search,inputParams);bar.addView(clear,new LinearLayout.LayoutParams(dp(44),dp(44)));return bar;
+        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(0,dp(48),1);inputParams.setMargins(dp(8),0,dp(8),0);bar.addView(search,inputParams);bar.addView(clear,new LinearLayout.LayoutParams(dp(48),dp(48)));return bar;
     }
     private View categoryTabs(){
         HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setBackgroundColor(BG);scroll.setHorizontalScrollBarEnabled(false);scroll.setPadding(dp(12),dp(2),dp(12),dp(8));scroll.setClipToPadding(false);LinearLayout tabs=horizontal();
         for(String option:TextBank.categories()){
-            boolean selected=option.equals(category);TextView text=label(option,13,selected?Color.WHITE:MUTED,true);text.setGravity(Gravity.CENTER);text.setMinHeight(dp(40));text.setPadding(dp(16),dp(9),dp(16),dp(9));text.setBackground(ripple(selected?ACCENT:Color.WHITE,20));
-            text.setOnClickListener(v->{category=option;freshSuggestions();render();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,dp(40));cp.setMarginEnd(dp(6));tabs.addView(text,cp);
+            boolean selected=option.equals(category);TextView text=label(option,13,selected?Color.WHITE:MUTED,true);text.setGravity(Gravity.CENTER);text.setMinHeight(dp(48));text.setPadding(dp(16),dp(9),dp(16),dp(9));text.setBackground(ripple(selected?ACCENT:Color.WHITE,24));
+            text.setOnClickListener(v->{category=option;freshSuggestions();render();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,dp(48));cp.setMarginEnd(dp(6));tabs.addView(text,cp);
         }
         scroll.addView(tabs);return scroll;
     }
@@ -261,7 +257,7 @@ public class MainActivity extends Activity {
         for(int i=0;i<titles.length;i++){
             final int tab=tabs[i];boolean selected=currentTab==tab;
             LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(54));item.setPadding(0,dp(4),0,dp(4));
-            ImageView icon=new ImageView(this);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ACCENT:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
+            ImageView icon=new ImageView(this);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ACCENT:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
             TextView title=label(titles[i],11,selected?ACCENT:MUTED,selected);title.setGravity(Gravity.CENTER);item.addView(title);title.setOnClickListener(v->selectTab(tab));
             item.setBackground(ripple(selected?PALE:Color.TRANSPARENT,24));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));
             nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
@@ -277,7 +273,7 @@ public class MainActivity extends Activity {
 
     private ImageButton compactAction(String description,int icon,Runnable action){
         ImageButton button=new ImageButton(this);button.setImageResource(icon);button.setColorFilter(ACCENT);
-        button.setContentDescription(description);button.setBackground(ripple(PALE,22));button.setPadding(dp(11),dp(11),dp(11),dp(11));
+        button.setContentDescription(description);button.setBackground(ripple(PALE,24));button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);button.setAdjustViewBounds(false);button.setMinimumWidth(dp(48));button.setMinimumHeight(dp(48));button.setPadding(dp(12),dp(12),dp(12),dp(12));
         button.setOnClickListener(v->action.run());return button;
     }
     private void suggestionsPage(){
@@ -306,8 +302,8 @@ public class MainActivity extends Activity {
                 if(sessionEnqueued.contains(text)){toast("این پیام در صف است.");return;}
                 if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
-            random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(44),dp(44)));
-            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.COMPLEMENT_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_COMPLEMENT,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
+            random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.COMPLEMENT_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_COMPLEMENT,24));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(48),dp(48));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
     }
@@ -388,7 +384,7 @@ public class MainActivity extends Activity {
         },"delneveshte-catalog-browse").start();
     }
     CloudSync.Transport catalogTransport(CloudConfig cloud){return new CloudApi(cloud);}
-    private String catalogNickname(){return draft==null?"عزیزم":draft.nickname;}
+    private String catalogNickname(){return "عزیزم";}
     private void appendOption(String raw){
         String text=CatalogText.render(raw,catalogNickname());if(text==null||options.contains(text))return;
         String[] parts=raw.split("\\n—",2);
@@ -642,7 +638,7 @@ public class MainActivity extends Activity {
     private void settingsPage() {
         heading("تنظیمات ارسال", "تعداد و بازهٔ زمانی، به انتخاب تو");
         LinearLayout destination = card(Color.WHITE);
-        destination.addView(label("مقصد و لحن پیام",15,ACCENT,true));
+        destination.addView(label("مقصد پیامک",15,ACCENT,true));
         destination.addView(fieldTitle("شمارهٔ همسرت"));
         EditText phone = input(draft.recipient, "مثلاً ‎+98912…", InputType.TYPE_CLASS_PHONE);
         phone.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -651,11 +647,6 @@ public class MainActivity extends Activity {
         phone.setFilters(new InputFilter[]{new InputFilter.LengthFilter(24)});
         watch(phone, value -> draft.recipient = asciiDigits(value).replace(" ", ""));
         destination.addView(phone, match());
-        destination.addView(fieldTitle("نام یا لقب در پیشنهادها"));
-        EditText nickname = input(draft.nickname, "مثلاً عزیزم", InputType.TYPE_CLASS_TEXT);
-        nickname.setFilters(new InputFilter[]{new InputFilter.LengthFilter(40)});
-        watch(nickname, value -> draft.nickname = value.trim());
-        destination.addView(nickname, match());
         destination.addView(fieldTitle("سیم‌کارت ارسال‌کننده"));
         destination.addView(button(simLabel(draft.subscriptionId) + "  ›", false, this::showSimPicker));
         destination.addView(body("شماره و سیم‌کارت هر پیام هنگام تأیید آن ذخیره می‌شوند. تغییر تنظیمات، مقصد پیام‌های قبلی را عوض نمی‌کند.", 12));
@@ -716,21 +707,15 @@ public class MainActivity extends Activity {
         page.addView(permissions);
 
         LinearLayout phoneHelp = card(Color.WHITE);
-        phoneHelp.addView(label("آماده‌سازی شیائومی", 17, INK, true));
-        phoneHelp.addView(body("۱. در تنظیمات برنامه، Background autostart یا شروع خودکار را روشن کن.\n۲. Battery saver را روی No restrictions یا بدون محدودیت بگذار.\n۳. Google Messages را پیام‌رسان پیش‌فرض نگه دار.\nنام و مسیر منوها در MIUI و HyperOS ممکن است متفاوت باشد.", 14));
-        phoneHelp.addView(button("بازکردن تنظیمات برنامه", false, this::openAppSettings));
-        add(phoneHelp, button("تنظیم شروع خودکار شیائومی", false, this::openAutostart), 8, 0);
-        String smsPackage = Telephony.Sms.getDefaultSmsPackage(this);
-        phoneHelp.addView(body("com.google.android.apps.messaging".equals(smsPackage)
-                ? "✓  Google Messages پیام‌رسان پیش‌فرض گوشی است."
-                : "برای بررسی ثبت پیام‌ها، Google Messages را در برنامه‌های پیش‌فرض انتخاب کن.", 13));
-        add(phoneHelp, button("برنامه‌های پیش‌فرض گوشی", false,
-                () -> openSystem(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))), 8, 0);
-        phoneHelp.addView(body("برای آزمون اول، یک متن را تأیید کن و در صف «ارسال همین حالا» را بزن؛ سپس ثبت آن را در گفت‌وگوی همسرت در Google Messages ببین. محدودیت‌های گوشی و نصب باید روی همین دستگاه بررسی شوند.", 13));
+        phoneHelp.addView(label("اجرای پس‌زمینه و باتری",17,INK,true));
+        phoneHelp.addView(body("برای اجرای زمان‌بندی، اجازهٔ فعالیت پس‌زمینهٔ دل‌نوشته را بررسی کن و محدودیت مصرف باتری برنامه را بردار. بعضی گوشی‌ها گزینهٔ «شروع خودکار» هم دارند. نام و مسیر این گزینه‌ها بسته به سازنده و نسخهٔ اندروید متفاوت است.",14));
+        phoneHelp.addView(button("تنظیمات برنامه",false,this::openAppSettings));
+        add(phoneHelp,button("تنظیم مصرف باتری",false,this::openBatterySettings),8,0);
+        phoneHelp.addView(body("پیامک‌ها از سیم‌کارت انتخابی ارسال می‌شوند. برای دیدن آن‌ها، پیام‌رسان پیش‌فرض گوشی را بررسی کن؛ می‌توانی از Google Messages یا پیام‌رسان گوشی استفاده کنی.",13));
+        add(phoneHelp,button("پیام‌رسان پیش‌فرض",false,()->openSystem(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))),8,0);
         page.addView(phoneHelp);
-        cloudSettings();
         addPage(button("درباره و مجوزها",false,this::showLicenses),0,8);
-        addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "\nصف همیشه ابتدا روی گوشی ذخیره می‌شود. همگام‌سازی به اینترنت و اجازهٔ اجرای پس‌زمینه نیاز دارد.", 12), 0, 0);
+        addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "", 12), 0, 0);
     }
 
     private void showLicenses(){
@@ -743,44 +728,6 @@ public class MainActivity extends Activity {
             }catch(java.io.IOException error){content.addView(body("اطلاعات منابع در مستندات محصول ثبت شده است.",12));}
         }
         new AlertDialog.Builder(this).setTitle("درباره و مجوزها").setView(scrollDialog(content)).setPositiveButton("بستن",null).show();
-    }
-
-    private static final String CLOUD_DISCLOSURE = "همگام‌سازی به‌صورت پیش‌فرض فعال است. هنگام اتصال به اینترنت، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";
-
-    private void cloudSettings() {
-        CloudConfig cloud=new CloudConfig(this);
-        LinearLayout section=card(Color.WHITE);
-        section.addView(label("بانک پیام‌ها و همگام‌سازی",17,INK,true));
-        section.addView(body(CLOUD_DISCLOSURE,13));
-        section.addView(body(cloud.enabled()?"همگام‌سازی فعال است":"همگام‌سازی غیرفعال است",14));
-        section.addView(body("پیام‌های در انتظار همگام‌سازی: "+fa(store.pendingSyncCount()),13));
-        if(cloud.lastSync()>0)section.addView(body("آخرین همگام‌سازی: "+DateFormat.getDateTimeInstance().format(new Date(cloud.lastSync())),12));
-        if(!cloud.lastError().isEmpty())section.addView(body(cloud.lastError(),13));
-        if(cloud.enabled()) {
-            section.addView(button("همگام‌سازی با اینترنت",false,()->{
-                freshSuggestions();
-            }));
-            add(section,button("خاموش‌کردن همگام‌سازی",false,()->{
-                cloud.configure(cloud.baseUrl(),false);CloudScheduler.ensure(this);render();
-                toast("همگام‌سازی متوقف شد؛ اطلاعات قبلی سرور حذف نمی‌شود");
-            }),8,0);
-        }
-        add(section,button(cloud.enabled()?"تغییر سرور":"راه‌اندازی همگام‌سازی",false,()->{
-            LinearLayout content=dialogContent();content.addView(body(CLOUD_DISCLOSURE,13));
-            EditText address=input(cloud.baseUrl(),"https://…workers.dev",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
-            address.setTextDirection(View.TEXT_DIRECTION_LTR);content.addView(address,match());
-            AlertDialog dialog=new AlertDialog.Builder(this).setTitle("اتصال به سرور")
-                    .setView(content).setPositiveButton("ذخیره و فعال‌کردن",null).setNegativeButton("انصراف",null).create();
-            dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-                try {
-                    String url=CloudConfig.normalizeUrl(address.getText().toString());
-                    boolean changed=!url.equals(cloud.baseUrl());cloud.configure(url,true);
-                    if(changed){store.clearCatalog();cloud.catalogUpdatedReset();}
-                    CloudScheduler.ensure(this);renewOptions();dialog.dismiss();render();
-                }catch(IllegalArgumentException error){address.setError(error.getMessage());}
-            }));dialog.show();
-        }),8,0);
-        page.addView(section);
     }
 
     private Button timeButton(boolean start) {
@@ -899,7 +846,7 @@ public class MainActivity extends Activity {
     }
 
     private void explainSimPermission() {
-        new AlertDialog.Builder(this).setTitle("انتخاب بین دو سیم‌کارت")
+        new AlertDialog.Builder(this).setTitle("انتخاب سیم‌کارت")
                 .setMessage("اجازهٔ دسترسی تلفن فقط برای دیدن سیم‌کارت‌های فعال و انتخاب سیم‌کارت ارسال‌کننده لازم است. پیامک‌ها و تماس‌هایت خوانده نمی‌شوند.")
                 .setPositiveButton("ادامه", (d, which) -> requestPermissionOrSettings(
                         Manifest.permission.READ_PHONE_STATE, REQUEST_SIM))
@@ -945,15 +892,9 @@ public class MainActivity extends Activity {
                 Uri.parse("package:" + getPackageName())));
     }
 
-    private void openAutostart() {
-        Intent intent = new Intent();
-        intent.setComponent(new ComponentName("com.miui.securitycenter",
-                "com.miui.permcenter.autostart.AutoStartManagementActivity"));
-        try { startActivity(intent); }
-        catch (RuntimeException error) {
-            toast("این مسیر در نسخهٔ گوشی متفاوت است؛ در تنظیمات، «شروع خودکار» را جست‌وجو کن.");
-            openAppSettings();
-        }
+    private void openBatterySettings(){
+        Intent intent=new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        try{startActivity(intent);}catch(ActivityNotFoundException|SecurityException error){openAppSettings();}
     }
 
     private void openSystem(Intent intent) {

@@ -30,6 +30,9 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28)
 public class MessageActionsTest {
+    public static class OfflineActivity extends MainActivity {
+        @Override CloudSync.Transport catalogTransport(CloudConfig cloud){return (path,body)->{throw new CloudApi.Failure(0,"offline");};}
+    }
     private AppStore store;
     private Settings settings;
 
@@ -43,7 +46,7 @@ public class MessageActionsTest {
         app.deleteDatabase("messages.db");
         app.getSharedPreferences("settings", 0).edit().clear().commit();
         app.getSharedPreferences("catalog_format",0).edit().putInt("version",3).commit();
-        app.getSharedPreferences("cloud", 0).edit().clear().putBoolean("enabled",false).putLong("last_catalog",System.currentTimeMillis()).commit();
+        app.getSharedPreferences("cloud", 0).edit().clear().putLong("last_catalog",System.currentTimeMillis()).commit();
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(
                 Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS);
         shadowOf(app.getPackageManager()).setSystemFeature(PackageManager.FEATURE_TELEPHONY, true);
@@ -65,7 +68,7 @@ public class MessageActionsTest {
         shadowOf(Looper.getMainLooper()).idle();
     }
     @Test public void compactCardAddsRandomWithOneTapAndPreservesTheApprovedSnapshot() throws Exception {
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             MainActivity a=c.get();View action=CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی");assertNotNull(action);action.performClick();shadowOf(Looper.getMainLooper()).idle();
             assertEquals(1,store.queue().size());assertNull(ShadowAlertDialog.getLatestAlertDialog());assertEquals("RANDOM",store.queue().get(0).sendMode);
             assertFalse(CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی").isEnabled());
@@ -73,14 +76,14 @@ public class MessageActionsTest {
         }
     }
     @Test public void editingOffersAllThreeModesAndRandomQueuesTheExactEditedText() throws Exception {
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();EditText input=CatalogBrowsingTest.search(editor.getWindow().getDecorView());input.setText("دلم یک چای دونفره می‌خواهد ☕💕");
             for(String label:new String[]{"ارسال همین حالا","ارسال در زمان تصادفی","ارسال در زمان دلخواه"})assertNotNull(CatalogBrowsingTest.text(editor.getWindow().getDecorView(),label));
             CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان تصادفی").performClick();shadowOf(Looper.getMainLooper()).idle();assertFalse(editor.isShowing());assertEquals(1,store.queue().size());assertEquals("دلم یک چای دونفره می‌خواهد ☕💕",store.queue().get(0).body);
         }
     }
     @Test public void editingCanChooseAFixedTimeAndCancelCreatesNoQueueEntry() throws Exception {
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.search(editor.getWindow().getDecorView()).setText("قرار عاشقانهٔ ما 💕");
             CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog schedule=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());schedule.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(store.queue().isEmpty());assertTrue(editor.isShowing());
             CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();shadowOf(Looper.getMainLooper()).idle();schedule=ShadowAlertDialog.getLatestAlertDialog();schedule.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
@@ -88,7 +91,7 @@ public class MessageActionsTest {
         }
     }
     @Test public void immediateCancellationCreatesNothingAndConfirmationUsesThePreviewedRecipient() throws Exception {
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             menu(c.get(),1);AlertDialog confirmation=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(store.history().isEmpty());
             menu(c.get(),1);confirmation=ShadowAlertDialog.getLatestAlertDialog();Settings changed=settings.copy();changed.recipient="+989351234567";store.saveSettings(changed);confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
             assertTrue(store.queue().isEmpty());assertEquals(1,store.history().size());Message m=store.history().get(0);assertEquals(settings.recipient,m.recipient);assertEquals("SENDING",m.status);assertEquals("IMMEDIATE",m.sendMode);
@@ -158,7 +161,7 @@ public class MessageActionsTest {
     }
     @Test public void queueEditorCancelChangesNothingAndSavingChangesTheSameMessage() throws Exception {
         settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);long id=store.approve("پیام صف ❤️",settings,"SIM");
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();Message before=store.get(id);
             CatalogBrowsingTest.text(root(a),"ویرایش زمان ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(before.revision,store.get(id).revision);
             CatalogBrowsingTest.text(root(a),"ویرایش زمان ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
@@ -168,7 +171,7 @@ public class MessageActionsTest {
 
     @Test public void queueCardTapAndLongPressOpenActionsWithConfirmationForSendingAndRemoval() throws Exception {
         String text="پیام صف برای منو ❤️";long id=store.approve(text,settings,"SIM");
-        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+        try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
             MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();
             View body=CatalogBrowsingTest.text(root(a),text);assertTrue(body.performLongClick());shadowOf(Looper.getMainLooper()).idle();
             android.widget.PopupMenu menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertEquals(4,menu.getMenu().size());

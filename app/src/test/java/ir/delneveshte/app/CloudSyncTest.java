@@ -30,7 +30,7 @@ public class CloudSyncTest {
         SQLiteDatabase old=(SQLiteDatabase)field.get(null);if(old!=null&&old.isOpen())old.close();field.set(null,null);
     }
     private CloudConfig enabled() {
-        CloudConfig config=new CloudConfig(app);config.configure("https://example.com",true);return config;
+        return new CloudConfig(app);
     }
     private JSONObject ack(JSONObject payload) throws Exception {
         JSONArray rows=payload.getJSONArray("messages"),acks=new JSONArray();
@@ -77,9 +77,9 @@ public class CloudSyncTest {
             fail("Invalid response must fail");
         }catch(IllegalStateException expected){assertEquals(1,store.pendingSyncCount());}
     }
-    @Test public void changingServerDuringUploadLeavesLocalDataPending() throws Exception {
+    @Test public void changingPolicyGenerationDuringUploadLeavesLocalDataPending() throws Exception {
         AppStore store=new AppStore(app);store.approve("لبخندت را دوست دارم 😊❤️",settings,"SIM");CloudConfig config=enabled();int generation=config.generation();
-        assertFalse(CloudSync.uploadBatch(store,(path,payload)->{config.configure("https://other.example.com",true);return ack(payload);},config,generation));
+        assertFalse(CloudSync.uploadBatch(store,(path,payload)->{app.getSharedPreferences("cloud",0).edit().putInt("generation",config.generation()+1).commit();return ack(payload);},config,generation));
         assertEquals(1,store.pendingSyncCount());
     }
     @Test public void catalogUpdatesCannotRewriteApprovedMessage() throws Exception {
@@ -89,9 +89,14 @@ public class CloudSyncTest {
         store.replaceCatalog("کوتاه",new JSONArray());assertTrue(store.hasCachedCatalog("کوتاه"));assertTrue(store.cachedSuggestions("کوتاه","جانم").isEmpty());
         assertEquals("جانم، کنار تو آرامم 🫂",store.get(message).body);
     }
-    @Test public void explicitDisableIsPreservedAfterReopeningSettings() {
-        CloudConfig cloud=new CloudConfig(app);assertTrue(cloud.enabled());
-        cloud.configure(cloud.baseUrl(),false);assertFalse(new CloudConfig(app).enabled());
+    @Test public void managedServerIgnoresLegacyDisableAndCustomUrlWithoutReplacingIdentity(){
+        String id=UUID.randomUUID().toString(),credential="0123456789abcdef";
+        app.getSharedPreferences("cloud",0).edit().putString("url","https://old.example.com").putBoolean("enabled",false)
+                .putString("installation_id",id).putString("credential",credential).putInt("generation",7).commit();
+        CloudConfig cloud=new CloudConfig(app);assertTrue(cloud.enabled());assertEquals(CloudConfig.normalizeUrl(BuildConfig.API_BASE_URL),cloud.baseUrl());
+        assertEquals(id,cloud.installationId());assertEquals(credential,cloud.credential());assertEquals(8,cloud.generation());assertFalse(cloud.registered());
+        CloudConfig reopened=new CloudConfig(app);assertEquals(8,reopened.generation());assertTrue(reopened.enabled());
+        app.getSharedPreferences("cloud",0).edit().putBoolean("enabled",false).putString("url","https://ignored.example.com").commit();assertTrue(reopened.enabled());assertEquals(cloud.baseUrl(),new CloudConfig(app).baseUrl());
     }
     @Test public void sourceMetadataNeverBecomesApprovedSmsBody() throws Exception {
         AppStore store=new AppStore(app);String body="دوستت دارم و کنار تو آرامم 💕";

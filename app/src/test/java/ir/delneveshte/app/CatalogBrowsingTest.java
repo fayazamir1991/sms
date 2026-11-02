@@ -41,7 +41,7 @@ public class CatalogBrowsingTest {
     @Before public void reset() throws Exception {
         app=RuntimeEnvironment.getApplication();Field f=AppStore.class.getDeclaredField("db");f.setAccessible(true);SQLiteDatabase old=(SQLiteDatabase)f.get(null);if(old!=null&&old.isOpen())old.close();f.set(null,null);app.deleteDatabase("messages.db");
         for(String name:new String[]{"settings","cloud","catalog_metadata","catalog_format"})app.getSharedPreferences(name,0).edit().clear().commit();
-        app.getSharedPreferences("catalog_format",0).edit().putInt("version",3).commit();CloudConfig cloud=new CloudConfig(app);cloud.configure("https://example.test",true);cloud.registrationSucceeded(cloud.generation());cloud.catalogUpdated();store=new AppStore(app);
+        app.getSharedPreferences("catalog_format",0).edit().putInt("version",3).commit();CloudConfig cloud=new CloudConfig(app);cloud.registrationSucceeded(cloud.generation());cloud.catalogUpdated();store=new AppStore(app);
         transport=(path,body)->{Pending req=new Pending(path);pending.add(req);requests.add(req);return req.result.get(10,TimeUnit.SECONDS);};
     }
     @After public void drain() throws Exception {synchronized(pending){for(Pending req:pending)req.result.complete(page());}for(Thread thread:Thread.getAllStackTraces().keySet())if(thread.getName().equals("delneveshte-catalog-browse"))thread.join(2000);shadowOf(Looper.getMainLooper()).idle();}
@@ -58,7 +58,7 @@ public class CatalogBrowsingTest {
     static void typed(View root,String q){search(root).setText(q);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));}
 
     @Test public void homeIsCompactAndOfflineLiveSearchHasClearWithoutASubmitButton() throws Exception {
-        new CloudConfig(app).configure("https://example.test",false);
+        transport=(path,body)->{throw new CloudApi.Failure(0,"offline");};
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();assertEquals(20,options(a).size());assertNull(search(root));assertNull(text(root,"انتخاب تو، ارسال در زمان‌های متفاوت"));
             text(root,"جست‌وجو").performClick();assertNotNull(search(root));typed(root,"کنار");assertFalse(options(a).isEmpty());for(String body:options(a))assertTrue(CatalogSearch.matches(body,"کنار"));

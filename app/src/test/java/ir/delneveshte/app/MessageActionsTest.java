@@ -193,8 +193,8 @@ public class MessageActionsTest {
             MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();
             ViewGroup card=(ViewGroup)CatalogBrowsingTest.text(root(a),text).getParent();assertEquals(0,actionCount(card,android.widget.Button.class));assertEquals(1,actionCount(card,android.widget.ImageButton.class));assertNull(CatalogBrowsingTest.text(card,settings.recipient));
             queueAction(a,text,5);AlertDialog info=ShadowAlertDialog.getLatestAlertDialog();assertTrue(shadowOf(info).getMessage().toString().contains(settings.recipient));info.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-            CatalogBrowsingTest.described(root(a),"حذف از صف").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog confirm=ShadowAlertDialog.getLatestAlertDialog();assertEquals(1,store.queue().size());confirm.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(1,store.queue().size());
-            CatalogBrowsingTest.described(root(a),"حذف از صف").performClick();shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertTrue(store.queue().isEmpty());assertEquals("CANCELLED",store.get(id).status);
+            CatalogBrowsingTest.described(root(a),"حذف از صف").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog confirm=ShadowAlertDialog.getLatestAlertDialog();assertEquals(1,store.queue().size());confirm.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals(1,store.queue().size());
+            CatalogBrowsingTest.described(root(a),"حذف از صف").performClick();shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(store.queue().isEmpty());assertEquals("CANCELLED",store.get(id).status);
         }
     }
     @Test public void tomorrowShortcutPreservesClockAndToastUsesRelativeDate(){

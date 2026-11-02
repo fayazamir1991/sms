@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         page = vertical();
-        page.setPadding(0,dp(8),0,dp(128));
+        page.setPadding(0,dp(8),0,dp(currentTab==0?168:104));
         scroll.addView(page);
         FrameLayout content=new FrameLayout(this);content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         content.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
@@ -205,7 +205,7 @@ public class MainActivity extends Activity {
         else if (currentTab == 1) queuePage();
         else if (currentTab == 2) historyPage();
         else settingsPage();
-        if(currentTab==0||currentTab==4){
+        if(currentTab==0){
             ImageButton compose=compactAction("نوشتن پیام",R.drawable.ic_compose,()->editText(""));
             compose.setBackground(ripple(ACCENT,28));compose.setColorFilter(Color.WHITE);compose.setElevation(dp(5));compose.setPadding(dp(16),dp(16),dp(16),dp(16));
             FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(56),dp(56),Gravity.BOTTOM|Gravity.END);fp.setMargins(dp(16),dp(16),dp(16),dp(96));content.addView(compose,fp);

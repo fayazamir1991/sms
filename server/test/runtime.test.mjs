@@ -72,3 +72,19 @@ test('explicit full rebuild clears installations, synced queue, event logs and c
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM catalog_messages').first()).n,1002);
  }finally{db.close();rmSync(dir,{recursive:true,force:true});}
 });
+
+test('production SQLite returns CTE browse/search rows and paginates all real seeded messages',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'sms-browse-')),db=new SQLiteStore(join(dir,'db.sqlite'));db.migrate();
+ try{
+  const env={DB:db,SESSION_SIGNING_KEY:'x'.repeat(48)},authorization='Bearer 141d6c45-f0b2-4c6b-8d6f-d31bcc1acd4e.'+'d'.repeat(64);
+  const request=(path,body)=>new Request('https://sms.example.test'+path,{method:body?'POST':'GET',headers:{Authorization:authorization,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+  assert.equal((await handle(request('/api/v1/installations/register',{app_version:'0.9.0'}),env)).status,201);
+  const first=await (await handle(request('/api/v1/messages/browse'),env)).json();assert.equal(first.messages.length,20);assert.ok(first.next_cursor);
+  const next=await (await handle(request('/api/v1/messages/browse?cursor='+encodeURIComponent(first.next_cursor)),env)).json();assert.equal(next.messages.length,20);assert.equal(new Set([...first.messages,...next.messages].map(r=>r.id)).size,40);
+  for(const q of ['عشق',first.messages[0].body.slice(0,12)]){
+   const response=await handle(request('/api/v1/messages/browse?q='+encodeURIComponent(q)),env);assert.equal(response.status,200);
+   const page=await response.json();assert.ok(page.messages.length>0,'Expected production search hits for '+q);
+  }
+  const cte=await db.prepare('WITH sample AS (SELECT 42 AS n) SELECT n FROM sample').all();assert.equal(cte.results[0].n,42);
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
+});

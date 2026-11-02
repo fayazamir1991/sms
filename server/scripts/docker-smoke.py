@@ -76,6 +76,11 @@ if(process.env.SMOKE_PHASE==='write'){
  const post=(path,body)=>fetch(base+path,{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(body)});
  assert.equal((await post('/api/v1/installations/register',{app_version:'0.3.0'})).status,201);
  const suggestions=await (await fetch(base+'/api/v1/messages/suggestions?limit=5',{headers:{Authorization:auth}})).json();assert.equal(suggestions.messages.length,5);
+ const browse=await (await fetch(base+'/api/v1/messages/browse',{headers:{Authorization:auth}})).json();assert.equal(browse.messages.length,20);
+ for(const q of ['عشق',browse.messages[0].body.slice(0,12)]){
+  const search=await (await fetch(base+'/api/v1/messages/browse?q='+encodeURIComponent(q),{headers:{Authorization:auth}})).json();assert.ok(search.messages.length>0,'Real Docker search must find '+q);
+ }
+ console.log('PASS: real Docker browse returns 20 messages and search finds عشق plus text from a displayed message.');
  const m={id:'521ac542-0c04-44f2-9b7b-3dd365df89ef',body:'کنارت آرامم 🫂❤️',recipient:'+989121234567',sim_id:7,status:'SENT',revision:3,approved_at:1000,submitted_at:2000,events:[]};
  for(let n=0;n<2;n++)assert.equal((await post('/api/v1/sync',{messages:[m]})).status,200);
  const catalog=await (await fetch(base+'/api/admin/tables/catalog',{headers})).json();

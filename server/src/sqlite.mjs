@@ -39,7 +39,7 @@ class Statement {
  bind(...args){return new Statement(this.db,this.sql,args);}
  execute(){
   const statement=this.db.prepare(this.sql);
-  if(/^\s*SELECT\b/i.test(this.sql))return {success:true,results:statement.all(...this.args).map(row=>({...row})),meta:{changes:0}};
+  if(statement.columns().length>0)return {success:true,results:statement.all(...this.args).map(row=>({...row})),meta:{changes:0}};
   const result=statement.run(...this.args);return {success:true,results:[],meta:{changes:Number(result.changes)}};
  }
  async all(){return this.execute();}

@@ -3,7 +3,6 @@ package ir.delneveshte.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.FrameLayout;
@@ -37,10 +36,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -426,26 +422,68 @@ public class MainActivity extends Activity {
     private void scheduleMessage(String text,Runnable saved){scheduleMessage(text,saved,null);}
     private void scheduleMessage(String text,Runnable saved,Message queued){
         ir.delneveshte.app.Settings snapshot=queued==null?snapshotForAction():null;if(queued==null&&snapshot==null)return;
-        String sim=queued==null?simLabel(snapshot.subscriptionId):queued.simLabel;java.util.Calendar time=java.util.Calendar.getInstance();
-        if(queued!=null&&queued.plannedAt>System.currentTimeMillis())time.setTimeInMillis(queued.plannedAt);
-        else {time.add(java.util.Calendar.HOUR_OF_DAY,1);time.set(java.util.Calendar.SECOND,0);time.set(java.util.Calendar.MILLISECOND,0);}
+        String sim=queued==null?simLabel(snapshot.subscriptionId):queued.simLabel;
+        java.time.ZoneId zone=java.time.ZoneId.systemDefault();long now=System.currentTimeMillis();
+        long[] at={queued!=null&&queued.plannedAt>now?queued.plannedAt:java.time.Instant.ofEpochMilli(now).atZone(zone).plusHours(1).withSecond(0).withNano(0).toInstant().toEpochMilli()};
         LinearLayout content=dialogContent();content.addView(body(text,16));
-        Button date=button("تاریخ: "+new SimpleDateFormat("yyyy/MM/dd",new Locale("fa")).format(time.getTime()),false,()->{});
-        Button clock=button("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()),false,()->{});
-        date.setOnClickListener(v->{DatePickerDialog picker=new DatePickerDialog(this,(view,y,m,d)->{time.set(y,m,d);date.setText("تاریخ: "+new SimpleDateFormat("yyyy/MM/dd",new Locale("fa")).format(time.getTime()));},time.get(java.util.Calendar.YEAR),time.get(java.util.Calendar.MONTH),time.get(java.util.Calendar.DAY_OF_MONTH));picker.getDatePicker().setMinDate(System.currentTimeMillis());picker.show();});
-        clock.setOnClickListener(v->new TimePickerDialog(this,(view,h,m)->{time.set(java.util.Calendar.HOUR_OF_DAY,h);time.set(java.util.Calendar.MINUTE,m);clock.setText("ساعت: "+new SimpleDateFormat("HH:mm",new Locale("fa")).format(time.getTime()));},time.get(java.util.Calendar.HOUR_OF_DAY),time.get(java.util.Calendar.MINUTE),true).show());
-        content.addView(date);content.addView(clock);content.addView(body("این زمان مستقل از بازه و تعداد ارسال تصادفی است. محدودیت باتری گوشی ممکن است باعث تأخیر شود.",12));
+        LinearLayout choices=horizontal();Button today=button("امروز",false,()->{}),tomorrow=button("فردا",false,()->{}),other=button("تاریخ دیگر",false,()->{});
+        Button[] dates={today,tomorrow,other};for(Button choice:dates){choice.setTextSize(13);choice.setPadding(dp(4),dp(8),dp(4),dp(8));LinearLayout.LayoutParams lp=weighted();lp.setMarginEnd(dp(4));choices.addView(choice,lp);}content.addView(choices);
+        TextView chosenDate=body("",13),summary=label("",14,ACCENT,true);content.addView(chosenDate);
+        Button clock=button("",false,()->{});content.addView(clock);add(content,summary,8,0);
+        Runnable update=()->{
+            java.time.LocalDate day=java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalDate(),current=java.time.LocalDate.now(zone);
+            int active=day.equals(current)?0:day.equals(current.plusDays(1))?1:2;
+            for(int i=0;i<dates.length;i++){dates[i].setSelected(i==active);dates[i].setBackground(ripple(i==active?ACCENT:PALE,14));dates[i].setTextColor(i==active?Color.WHITE:AppThemeTokens.ACCENT_INK);}
+            chosenDate.setText(PersianDates.solar(day,zone));clock.setText("ساعت: "+PersianDates.clock(at[0],zone));summary.setText("زمان ارسال: "+formatDate(at[0]));
+        };
+        java.util.function.Consumer<java.time.LocalDate> choose=day->{java.time.LocalTime hour=java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalTime();at[0]=day.atTime(hour).atZone(zone).toInstant().toEpochMilli();update.run();};
+        today.setOnClickListener(v->choose.accept(java.time.LocalDate.now(zone)));tomorrow.setOnClickListener(v->choose.accept(java.time.LocalDate.now(zone).plusDays(1)));
+        other.setOnClickListener(v->showPersianDatePicker(java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalDate(),choose));
+        clock.setOnClickListener(v->{java.time.ZonedDateTime time=java.time.Instant.ofEpochMilli(at[0]).atZone(zone);new TimePickerDialog(this,(view,h,m)->{at[0]=java.time.Instant.ofEpochMilli(at[0]).atZone(zone).toLocalDate().atTime(h,m).atZone(zone).toInstant().toEpochMilli();update.run();},time.getHour(),time.getMinute(),true).show();});update.run();
+        content.addView(body("این زمان مستقل از بازه و تعداد ارسال تصادفی است. محدودیت باتری گوشی ممکن است باعث تأخیر شود.",12));
         if(!store.settings().enabled)content.addView(body("ارسال زمان‌دار متوقف است؛ برای اجرا، ارسال را در تنظیمات روشن کن.",12));
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(queued==null?"زمان ارسال":"ویرایش زمان ارسال").setView(scrollDialog(content)).setPositiveButton(queued==null?"زمان‌بندی پیام":"ذخیرهٔ زمان",null).setNegativeButton("انصراف",null).create();
         dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
-            if(time.getTimeInMillis()<=System.currentTimeMillis()){toast("زمانی در آینده انتخاب کن.");return;}
+            if(at[0]<=System.currentTimeMillis()){toast("زمانی در آینده انتخاب کن.");return;}
             try{
-                if(queued==null){store.approveFixed(text,snapshot,sim,time.getTimeInMillis());SmsRuntime.reconcile(this);}
-                else if(!SmsRuntime.rescheduleQueued(this,queued.id,queued.revision,time.getTimeInMillis())){toast("وضعیت پیام تغییر کرده؛ صف را دوباره بررسی کن.");dialog.dismiss();render();return;}
-                toast("زمان ارسال ذخیره شد.");dialog.dismiss();if(saved!=null)saved.run();
-            }
-            catch(RuntimeException error){toast("زمان‌بندی ذخیره نشد؛ تنظیمات را بررسی کن.");}
+                if(queued==null){store.approveFixed(text,snapshot,sim,at[0]);SmsRuntime.reconcile(this);}
+                else if(!SmsRuntime.rescheduleQueued(this,queued.id,queued.revision,at[0])){toast("وضعیت پیام تغییر کرده؛ صف را دوباره بررسی کن.");dialog.dismiss();render();return;}
+                toast("زمان ارسال: "+formatDate(at[0]));dialog.dismiss();if(saved!=null)saved.run();
+            }catch(RuntimeException error){toast("زمان‌بندی ذخیره نشد؛ تنظیمات را بررسی کن.");}
         }));dialog.show();
+    }
+
+    private void showPersianDatePicker(java.time.LocalDate initial,java.util.function.Consumer<java.time.LocalDate> onSelected){
+        java.time.ZoneId zone=java.time.ZoneId.systemDefault();java.time.LocalDate minimum=java.time.LocalDate.now(zone);
+        java.time.LocalDate[] selected={initial.isBefore(minimum)?minimum:initial};int[] month=PersianDates.fields(selected[0],zone);
+        LinearLayout content=dialogContent(),header=horizontal(),grid=vertical();
+        ImageButton previous=toolbarAction("ماه قبل",R.drawable.ic_back,()->{}),next=toolbarAction("ماه بعد",R.drawable.ic_back,()->{});next.setRotation(180);
+        Button title=button("",false,()->{});header.addView(previous,new LinearLayout.LayoutParams(dp(48),dp(48)));LinearLayout.LayoutParams tp=weighted();tp.setMargins(dp(6),0,dp(6),0);header.addView(title,tp);header.addView(next,new LinearLayout.LayoutParams(dp(48),dp(48)));content.addView(header);
+        TextView selection=body("",13);content.addView(selection);content.addView(grid);
+        AlertDialog picker=new AlertDialog.Builder(this).setTitle("انتخاب تاریخ خورشیدی").setView(scrollDialog(content)).setPositiveButton("انتخاب تاریخ",null).setNegativeButton("انصراف",null).create();
+        Runnable[] draw=new Runnable[1];draw[0]=()->{
+            title.setText(PersianDates.MONTHS[month[1]-1]+" "+PersianDates.digits(month[0]));selection.setText("انتخاب‌شده: "+PersianDates.solar(selected[0],zone));grid.removeAllViews();
+            java.time.LocalDate first=PersianDates.date(month[0],month[1],1,zone);int length=PersianDates.monthLength(month[0],month[1],zone),offset=(first.getDayOfWeek().getValue()+1)%7;
+            int[] current=PersianDates.fields(java.time.LocalDate.now(zone),zone);previous.setEnabled(first.isAfter(PersianDates.date(current[0],current[1],1,zone)));previous.setAlpha(previous.isEnabled()?1f:.35f);
+            LinearLayout week=horizontal();String[] shortNames={"ش","ی","د","س","چ","پ","ج"},names={"شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"};
+            for(int i=0;i<7;i++){TextView day=label(shortNames[i],12,MUTED,true);day.setContentDescription(names[i]);day.setGravity(Gravity.CENTER);week.addView(day,new LinearLayout.LayoutParams(0,dp(32),1));}grid.addView(week);
+            for(int start=0;start<offset+length;start+=7){LinearLayout row=horizontal();
+                for(int col=0;col<7;col++){int number=start+col-offset+1;
+                    if(number<1||number>length){row.addView(new View(this),new LinearLayout.LayoutParams(0,dp(48),1));continue;}
+                    java.time.LocalDate date=PersianDates.date(month[0],month[1],number,zone);boolean active=date.equals(selected[0]);
+                    Button cell=button(PersianDates.digits(number),active,()->{selected[0]=date;draw[0].run();});cell.setPadding(0,dp(6),0,dp(6));cell.setMinWidth(0);cell.setMinimumWidth(0);cell.setSelected(active);cell.setContentDescription(PersianDates.solar(date,zone));cell.setEnabled(!date.isBefore(java.time.LocalDate.now(zone)));cell.setAlpha(cell.isEnabled()?1f:.30f);row.addView(cell,new LinearLayout.LayoutParams(0,dp(48),1));
+                }grid.addView(row);
+            }
+        };
+        previous.setOnClickListener(v->{month[1]--;if(month[1]<1){month[1]=12;month[0]--;}draw[0].run();});next.setOnClickListener(v->{month[1]++;if(month[1]>12){month[1]=1;month[0]++;}draw[0].run();});
+        title.setContentDescription("انتخاب ماه و سال خورشیدی");title.setOnClickListener(v->{
+            LinearLayout fields=horizontal();android.widget.NumberPicker years=new android.widget.NumberPicker(this),months=new android.widget.NumberPicker(this);int year=PersianDates.fields(java.time.LocalDate.now(zone),zone)[0];
+            years.setMinValue(year);years.setMaxValue(Math.max(year+100,month[0]));years.setValue(month[0]);years.setWrapSelectorWheel(false);years.setFormatter(value->PersianDates.digits(value));years.setContentDescription("سال خورشیدی");
+            months.setMinValue(1);months.setMaxValue(12);months.setDisplayedValues(PersianDates.MONTHS);months.setValue(month[1]);months.setWrapSelectorWheel(false);months.setContentDescription("ماه خورشیدی");fields.addView(months,new LinearLayout.LayoutParams(0,-2,1));fields.addView(years,new LinearLayout.LayoutParams(0,-2,1));
+            AlertDialog chooser=new AlertDialog.Builder(this).setTitle("ماه و سال خورشیدی").setView(fields).setPositiveButton("نمایش ماه",null).setNegativeButton("انصراف",null).create();
+            chooser.setOnShowListener(w->chooser.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{fields.clearFocus();int[] today=PersianDates.fields(java.time.LocalDate.now(zone),zone);if(PersianDates.date(years.getValue(),months.getValue(),1,zone).isBefore(PersianDates.date(today[0],today[1],1,zone))){toast("ماه جاری یا آینده را انتخاب کن.");return;}month[0]=years.getValue();month[1]=months.getValue();draw[0].run();chooser.dismiss();}));chooser.show();
+        });
+        picker.setOnShowListener(v->picker.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{if(selected[0].isBefore(java.time.LocalDate.now(zone))){toast("امروز یا روزی در آینده را انتخاب کن.");return;}onSelected.accept(selected[0]);picker.dismiss();}));draw[0].run();picker.show();
     }
 
     private ir.delneveshte.app.Settings snapshotForAction() {
@@ -501,10 +539,8 @@ public class MainActivity extends Activity {
         LinearLayout info = card(PALE);
         info.addView(label(enabled ? "ارسال خودکار روشن است" : "ارسال خودکار متوقف است",
                 16, ACCENT, true));
-        info.addView(body(enabled
-                ? "زمان همهٔ پیام‌ها مشخص است. با «ویرایش زمان ارسال» می‌توانی برای هر پیام زمان دلخواه انتخاب کنی. محدودیت باتری ممکن است باعث تأخیر شود."
-                : "زمان پیام‌ها محفوظ است، اما تا روشن‌کردن ارسال خودکار پیامکی ارسال نمی‌شود. زمان‌های تصادفی گذشته هنگام فعال‌سازی دوباره تنظیم می‌شوند.", 14));
-        if (!enabled) info.addView(button("رفتن به تنظیمات", false, () -> selectTab(3)));
+        info.addView(body(enabled?"برای تغییر زمان یا ارسال فوری، روی پیام بزن.":"زمان‌ها محفوظ‌اند. برای فعال‌کردن ارسال، به تنظیمات برو.",13));
+        info.setOnClickListener(v->selectTab(3));
         page.addView(info);
         if (queue.isEmpty()) {
             empty("صف، منتظر حرف‌های توست", "چند پیشنهاد را انتخاب و تأیید کن. بدون متن تأییدشده، چیزی ارسال نمی‌شود.",
@@ -518,22 +554,8 @@ public class MainActivity extends Activity {
             c.setOnClickListener(v->queueMessageMenu(c,message));c.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});c.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
             messageText.setOnClickListener(v->queueMessageMenu(c,message));messageText.setOnLongClickListener(v->{queueMessageMenu(c,message);return true;});messageText.setOnContextClickListener(v->{queueMessageMenu(c,message);return true;});
             c.addView(messageText);
-            c.addView(divider());
-            c.addView(phoneLabel(message.recipient));
-            c.addView(label(message.simLabel, 12, MUTED, false));
-            if (!message.recipient.equals(store.settings().recipient)
-                    || message.subscriptionId != store.settings().subscriptionId) {
-                c.addView(body("این پیام با مقصد و سیم‌کارت زمان تأیید ارسال می‌شود؛ تنظیمات تازه آن را تغییر نداده است.", 12));
-            }
-            add(c,actionButton("ویرایش زمان ارسال",R.drawable.ic_clock,false,()->scheduleMessage(message.body,this::render,message)),12,0);
-            LinearLayout actions = horizontal();
-            Button sendNow = actionButton("ارسال فوری", R.drawable.ic_send, false, () -> confirmSendNow(message));
-            Button cancel = button("حذف از صف", false, () -> cancelMessage(message));
-            actions.addView(sendNow, weighted());
-            LinearLayout.LayoutParams cp = weighted();
-            cp.setMarginStart(dp(8));
-            actions.addView(cancel, cp);
-            add(c, actions, 12, 0);
+            LinearLayout actions=horizontal();actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+            ImageButton remove=compactAction("حذف از صف",R.drawable.ic_delete,()->cancelMessage(message));actions.addView(remove,new LinearLayout.LayoutParams(dp(48),dp(48)));c.addView(actions);
             page.addView(c);
         }
     }
@@ -542,8 +564,9 @@ public class MainActivity extends Activity {
         android.widget.PopupMenu menu=new android.widget.PopupMenu(this,anchor);
         menu.getMenu().add(0,1,0,"ویرایش زمان ارسال").setIcon(R.drawable.ic_clock);
         menu.getMenu().add(0,2,1,"ارسال همین حالا").setIcon(R.drawable.ic_send);
-        menu.getMenu().add(0,3,2,"حذف از صف").setIcon(R.drawable.ic_close);
+        menu.getMenu().add(0,3,2,"حذف از صف").setIcon(R.drawable.ic_delete);
         menu.getMenu().add(0,4,3,"کپی متن").setIcon(R.drawable.ic_copy);
+        menu.getMenu().add(0,5,4,"اطلاعات ارسال").setIcon(R.drawable.ic_info);
         for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==0?AppThemeTokens.COMPLEMENT_INK:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
@@ -551,6 +574,7 @@ public class MainActivity extends Activity {
                 case 1:scheduleMessage(message.body,this::render,message);break;
                 case 2:confirmSendNow(message);break;
                 case 3:cancelMessage(message);break;
+                case 5:new AlertDialog.Builder(this).setTitle("اطلاعات ارسال").setMessage("زمان ارسال: "+formatDate(message.plannedAt)+"\nشماره: "+message.recipient+"\n"+message.simLabel+"\nاین پیام با شماره و سیم‌کارت زمان تأیید ارسال می‌شود.").setPositiveButton("بستن",null).show();break;
                 case 4:((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("پیام",message.body));toast("متن کپی شد.");break;
                 default:return false;
             }return true;
@@ -1106,9 +1130,7 @@ public class MainActivity extends Activity {
     private void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
 
     private String formatDate(long millis) {
-        if (millis <= 0) return "";
-        DateFormat format = new SimpleDateFormat("EEE d MMM، HH:mm", new Locale("fa"));
-        return format.format(new Date(millis));
+        return PersianDates.relative(millis,System.currentTimeMillis(),java.time.ZoneId.systemDefault());
     }
 
     private String time(int minute) {

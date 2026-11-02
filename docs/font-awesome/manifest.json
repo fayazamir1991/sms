@@ -212,6 +212,21 @@
         512.0,
         512.0
       ]
+    },
+    {
+      "resource": "ic_delete",
+      "icon": "trash-can",
+      "source_sha": "e0b89d995a2df9c05a195373f2b3acaac7ecf4c0",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/trash-can.svg",
+      "source_viewport": [
+        448,
+        512
+      ],
+      "android_viewport": [
+        544,
+        544
+      ],
+      "adaptation": "Original paths preserved; centered square padding includes glyph overshoot; runtime tint"
     }
   ]
 }

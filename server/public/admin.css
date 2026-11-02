@@ -5,3 +5,5 @@
 
 /* Shared red, dusty pink and gold palette; Vazirmatn remains self-hosted. */
 :root{--accent:#c8324d;--dusty-pink:#b47d8f;--gold:#a67c35}.connection{background:#faf3e7;color:#866328}.brand-mark,.brand>span{color:var(--accent)}.sidebar nav button.selected{box-shadow:inset -3px 0 var(--gold)}.chart-trend{border-top:2px solid #d7ba83}
+
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:3px}a:hover{color:#9e2544}

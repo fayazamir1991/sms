@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
     private int currentTab;
     private String category;
     private List<String> options = new ArrayList<>();
-    private boolean refreshingSuggestions;
+    private boolean refreshingSuggestions,catalogNetworkFailed;
     private String catalogQuery="",catalogSearchDraft="",catalogCursor;
     private LinearLayout catalogResults;
     private final List<String> searchPending=new ArrayList<>();
@@ -236,7 +236,7 @@ public class MainActivity extends Activity {
         EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(18);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackground(shape(Color.WHITE,22,LINE));search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(12),0,dp(12),0);search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
         watch(search,value->{
-            catalogSearchDraft=value;catalogQuery=value.trim();clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
+            catalogSearchDraft=value;catalogQuery=value.trim();catalogNetworkFailed=false;clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
             handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
         });
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
@@ -296,6 +296,7 @@ public class MainActivity extends Activity {
         else if(usingOfflineCatalog)status+=" · روی گوشی";
         TextView summary=label(status,12,MUTED,false);summary.setPadding(dp(16),dp(4),dp(16),dp(10));target.addView(summary);
         if(options.isEmpty())target.addView(body(refreshingSuggestions?"در حال جست‌وجو…":"پیامی پیدا نشد.",14));
+        if(options.isEmpty()&&!refreshingSuggestions&&catalogNetworkFailed&&currentTab==4)target.addView(body("برای جست‌وجو در کل بانک، اتصال به سرور را بررسی کن.",13));
         for(String text:options){
             LinearLayout c=messageCard();TextView message=body(text,17);message.setPadding(0,dp(2),0,dp(4));
             message.setOnClickListener(v->messageMenu(c,text));message.setOnLongClickListener(v->{messageMenu(c,text);return true;});
@@ -316,8 +317,8 @@ public class MainActivity extends Activity {
         menu.getMenu().add(0,2,1,"ارسال در زمان تصادفی").setIcon(R.drawable.ic_queue);
         menu.getMenu().add(0,3,2,"ارسال در زمان دلخواه").setIcon(R.drawable.ic_clock);
         menu.getMenu().add(0,4,3,"ویرایش متن").setIcon(R.drawable.ic_edit_schedule);
-        menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(android.R.drawable.ic_menu_info_details);
-        menu.getMenu().add(0,6,5,"کپی متن").setIcon(android.R.drawable.ic_menu_set_as);
+        menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(R.drawable.ic_info);
+        menu.getMenu().add(0,6,5,"کپی متن").setIcon(R.drawable.ic_copy);
         for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.GOLD:i==3?AppThemeTokens.DUSTY_PINK:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
@@ -338,7 +339,7 @@ public class MainActivity extends Activity {
         catalogRequested=true;
         if(!reset&&refreshingSuggestions)return;
         if(!reset&&liveQuery()&&!searchPending.isEmpty()){drainSearch(20);renderCatalogResults();return;}
-        if(reset){browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
+        if(reset){catalogNetworkFailed=false;browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
         CloudConfig cloud=new CloudConfig(this);
         if(!cloud.enabled()||(!reset&&usingOfflineCatalog)){
             if(!reset)appendLocalPage();
@@ -381,7 +382,7 @@ public class MainActivity extends Activity {
                         }
                         cloud.catalogUpdated();
                     }catch(Exception ignored){cloud.error("پاسخ جست‌وجو معتبر نیست.");}
-                }else{cloud.error(error);usingOfflineCatalog=true;if(liveQuery()){searchRemoteMore=false;catalogHasMore=!searchPending.isEmpty();}else if(reset&&options.isEmpty())renewOptions();toast(error);}
+                }else{catalogNetworkFailed=true;cloud.error(error);usingOfflineCatalog=true;if(liveQuery()){searchRemoteMore=false;catalogHasMore=!searchPending.isEmpty();}else if(reset&&options.isEmpty())renewOptions();}
                 renderCatalogResults();
             });
         },"delneveshte-catalog-browse").start();

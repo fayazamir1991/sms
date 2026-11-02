@@ -82,6 +82,8 @@ root=ui();assert any(n.get('text','').startswith('پیام‌ها: ۰') for n in
 tap_node(root,description='پاک‌کردن جست‌وجو');assert count(ui())>0
 print('PASS: dedicated live search changes results while typing, and clear restores messages without a search button.')
 
-screenshot('search')
+if 'mInputShown=true' in adb('shell','dumpsys','input_method'):
+    adb('shell','input','keyevent','4')
+ui();screenshot('search')
 root=launch();tap_node(root,text='تنظیمات');ui();screenshot('settings')
 print('PASS: real APK previews captured: home, context menu, live search and settings.')

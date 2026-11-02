@@ -4,7 +4,7 @@
   <item name="android:colorAccent">@color/brand_red</item>
   <item name="android:colorControlActivated">@color/brand_red</item>
   <item name="android:colorControlNormal">@color/secondary_text</item>
-  <item name="android:colorControlHighlight">#18C8324D</item>
+  <item name="android:colorControlHighlight">#18C81D25</item>
   <item name="android:textColorPrimary">@color/main_text</item><item name="android:textColorSecondary">@color/secondary_text</item>
   <item name="android:windowBackground">@color/page_background</item>
   <item name="android:statusBarColor">@color/page_background</item><item name="android:navigationBarColor">@color/surface</item>

@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private static final int BG=AppThemeTokens.BACKGROUND;
     private static final int INK=AppThemeTokens.TEXT;
     private static final int ACCENT=AppThemeTokens.ACCENT;
-    private static final int PALE=AppThemeTokens.SOFT_PINK;
+    private static final int PALE=AppThemeTokens.SOFT_ACCENT;
     private static final int MUTED=AppThemeTokens.SECONDARY;
     private static final int LINE=AppThemeTokens.DIVIDER;
     private static final int GOOD=AppThemeTokens.SUCCESS;
@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
     private View appHeader(){
         if(currentTab==4)return searchToolbar();
         LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(18),0,dp(12),0);bar.setMinimumHeight(dp(64));
-        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.DUSTY_PINK);brand.setBackground(shape(PALE,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
+        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.GOLD_INK);brand.setBackground(shape(AppThemeTokens.SOFT_GOLD,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
         LinearLayout title=vertical();String name=currentTab==0?"دل‌نوشته":currentTab==1?"صف ارسال":currentTab==2?"سابقه":"تنظیمات";
         title.addView(label(name,21,INK,true));
         boolean active=store.settings().enabled;String status=active?"ارسال فعال":"ارسال متوقف";
@@ -307,7 +307,7 @@ public class MainActivity extends Activity {
                 if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
             random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(44),dp(44)));
-            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.GOLD);fixed.setBackground(ripple(AppThemeTokens.SOFT_GOLD,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.GOLD_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_GOLD,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
     }
@@ -319,7 +319,7 @@ public class MainActivity extends Activity {
         menu.getMenu().add(0,4,3,"ویرایش متن").setIcon(R.drawable.ic_edit_schedule);
         menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(R.drawable.ic_info);
         menu.getMenu().add(0,6,5,"کپی متن").setIcon(R.drawable.ic_copy);
-        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.GOLD:i==3?AppThemeTokens.DUSTY_PINK:ACCENT);}
+        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.GOLD_INK:i==3?AppThemeTokens.ACCENT:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
             switch(item.getItemId()){
@@ -697,7 +697,20 @@ public class MainActivity extends Activity {
         phoneHelp.addView(body("برای آزمون اول، یک متن را تأیید کن و در صف «ارسال همین حالا» را بزن؛ سپس ثبت آن را در گفت‌وگوی همسرت در Google Messages ببین. محدودیت‌های گوشی و نصب باید روی همین دستگاه بررسی شوند.", 13));
         page.addView(phoneHelp);
         cloudSettings();
+        addPage(button("درباره و مجوزها",false,this::showLicenses),0,8);
         addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "\nصف همیشه ابتدا روی گوشی ذخیره می‌شود. همگام‌سازی به اینترنت و اجازهٔ اجرای پس‌زمینه نیاز دارد.", 12), 0, 0);
+    }
+
+    private void showLicenses(){
+        LinearLayout content=dialogContent();
+        content.addView(body("آیکن‌ها: Font Awesome Free 7.3.1، اثر Fonticons, Inc.\nآیکن‌های SVG با حفظ مسیرها به VectorDrawable اندروید تبدیل شده‌اند؛ رنگ آن‌ها با تم برنامه هماهنگ می‌شود.\nفونت فارسی: وزیرمتن.",14));
+        for(int resource:new int[]{R.raw.fontawesome_license,R.raw.vazirmatn_license}){
+            try(java.io.InputStream input=getResources().openRawResource(resource);java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream()){
+                byte[] buffer=new byte[4096];int read;while((read=input.read(buffer))!=-1)bytes.write(buffer,0,read);
+                TextView license=body(new String(bytes.toByteArray(),java.nio.charset.StandardCharsets.UTF_8),12);license.setTextIsSelectable(true);content.addView(license);
+            }catch(java.io.IOException error){content.addView(body("اطلاعات منابع در مستندات محصول ثبت شده است.",12));}
+        }
+        new AlertDialog.Builder(this).setTitle("درباره و مجوزها").setView(scrollDialog(content)).setPositiveButton("بستن",null).show();
     }
 
     private static final String CLOUD_DISCLOSURE = "همگام‌سازی به‌صورت پیش‌فرض فعال است. هنگام اتصال به اینترنت، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";
@@ -1103,8 +1116,8 @@ public class MainActivity extends Activity {
     }
 
     private RippleDrawable ripple(int color, int radius) {
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24,204,49,91)),
-                shape(color, radius, 0), shape(Color.WHITE, radius, 0));
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24,200,29,37)),
+                color==ACCENT?BrandSurfaces.lacquer(dp(radius),dp(1)):shape(color,radius,0),shape(Color.WHITE,radius,0));
     }
 
     private LinearLayout.LayoutParams match() { return new LinearLayout.LayoutParams(-1, -2); }

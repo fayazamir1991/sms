@@ -68,7 +68,7 @@ public class CatalogBrowsingTest {
             current.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));await(()->!refreshing(a));
             old.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));Thread.sleep(30);shadowOf(Looper.getMainLooper()).idle();
             assertEquals(java.util.Collections.singletonList(pair.getString("body_formal")),options(a));
-            root=a.getWindow().getDecorView();text(root,"جست‌وجو").performClick();typed(root,"نقره‌رو");Pending search=next();assertTrue(search.path.contains("tone=formal"));assertTrue(options(a).contains(pair.getString("body_formal")));assertFalse(options(a).contains(pair.getString("body_colloquial")));
+            root=a.getWindow().getDecorView();text(root,"جست‌وجو").performClick();typed(root,"نقره‌رو");Pending search=next();assertTrue(search.path.contains("tone=formal"));await(()->!options(a).isEmpty());assertTrue(options(a).contains(pair.getString("body_formal")));assertFalse(options(a).contains(pair.getString("body_colloquial")));
         }
     }
     @Test public void pullRefreshRequestsANewFirstPageAndEndsWhenTheResponseArrives() throws Exception {
@@ -83,7 +83,7 @@ public class CatalogBrowsingTest {
         transport=(path,body)->{throw new CloudApi.Failure(0,"offline");};
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();assertEquals(20,options(a).size());assertNull(search(root));assertNull(text(root,"انتخاب تو، ارسال در زمان‌های متفاوت"));
-            text(root,"جست‌وجو").performClick();assertNotNull(search(root));assertTrue(search(root).hasFocus());assertTrue(options(a).isEmpty());typed(root,"کنار");assertFalse(options(a).isEmpty());for(String body:options(a))assertTrue(CatalogSearch.matches(body,"کنار"));
+            text(root,"جست‌وجو").performClick();assertNotNull(search(root));assertTrue(search(root).hasFocus());assertTrue(options(a).isEmpty());typed(root,"کنار");await(()->!options(a).isEmpty());assertFalse(options(a).isEmpty());for(String body:options(a))assertTrue(CatalogSearch.matches(body,"کنار"));
             described(root,"پاک‌کردن جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals("",search(root).getText().toString());assertTrue(options(a).isEmpty());
         }
     }
@@ -91,7 +91,7 @@ public class CatalogBrowsingTest {
         String cached="عشق تو، آرامش روزهای من است 💕";store.rememberCatalog(new JSONArray().put(row(cached).put("category","شعر")));
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();next();text(root,"قدردانی").performClick();next();text(root,"جست‌وجو").performClick();assertTrue(options(a).isEmpty());
-            typed(root,"عشق");Pending q=next();assertTrue(q.path.contains("category="+URLEncoder.encode("همه","UTF-8")));assertTrue(q.path.contains("q="+URLEncoder.encode("عشق","UTF-8")));assertNotNull(text(root,cached));
+            typed(root,"عشق");Pending q=next();assertTrue(q.path.contains("category="+URLEncoder.encode("همه","UTF-8")));assertTrue(q.path.contains("q="+URLEncoder.encode("عشق","UTF-8")));await(()->options(a).contains(cached));assertNotNull(text(root,cached));
             q.result.complete(page());await(()->!refreshing(a));assertNotNull(text(root,cached));
         }
     }
@@ -142,7 +142,7 @@ public class CatalogBrowsingTest {
     @Test public void clearingWhileAReplyIsPendingCannotRestoreResultsOrPagination() throws Exception {
         store.rememberCatalog(new JSONArray().put(row("عشق تو، روشنی روزهای من است 💕")));
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
-            MainActivity a=c.get();View root=a.getWindow().getDecorView();Pending home=next();text(root,"جست‌وجو").performClick();root=a.getWindow().getDecorView();typed(root,"عشق");Pending old=next();assertFalse(options(a).isEmpty());assertFalse(hasCounter(root));
+            MainActivity a=c.get();View root=a.getWindow().getDecorView();Pending home=next();text(root,"جست‌وجو").performClick();root=a.getWindow().getDecorView();typed(root,"عشق");Pending old=next();await(()->!options(a).isEmpty());assertFalse(options(a).isEmpty());assertFalse(hasCounter(root));
             described(root,"پاک‌کردن جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));assertEquals("",search(root).getText().toString());assertTrue(options(a).isEmpty());assertFalse(refreshing(a));assertNull(requests.poll());
             home.result.complete(page("پیام قدیمی خانه 💕"));old.result.complete(page("عشق تو ماندنی است 💕").put("next_cursor","old-cursor").put("has_more",true));
             for(Thread thread:Thread.getAllStackTraces().keySet())if(thread.getName().equals("delneveshte-catalog-browse"))thread.join(2000);shadowOf(Looper.getMainLooper()).idle();

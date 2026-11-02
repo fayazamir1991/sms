@@ -351,6 +351,11 @@ public final class AppStore {
             }return out;
         }
     }
+    public List<String[]> searchChunk(String after,String tone){
+        List<String[]> out=new ArrayList<>();String selected="CASE WHEN category='شعر' THEN body ELSE "+("formal".equals(tone)?"body_formal":"body_colloquial")+" END";
+        synchronized(LOCK){try(Cursor c=db.rawQuery("SELECT id,"+selected+" FROM catalog_cache WHERE id>? ORDER BY id LIMIT 64",new String[]{after})){while(c.moveToNext())out.add(new String[]{c.getString(0),c.getString(1)});}}
+        return out;
+    }
     public String catalogCredit(String text) {
         try {
             JSONObject row=new JSONObject(app.getSharedPreferences("catalog_metadata",0).getString(text,"{}"));

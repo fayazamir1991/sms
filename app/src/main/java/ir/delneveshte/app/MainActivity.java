@@ -72,13 +72,9 @@ public class MainActivity extends Activity {
     private boolean refreshingSuggestions,catalogNetworkFailed;
     private String catalogQuery="",catalogSearchDraft="",catalogCursor;
     private LinearLayout catalogResults;
-    private final List<String> searchPending=new ArrayList<>();
-    private final java.util.Set<String> searchKnown=new java.util.HashSet<>();
-    private boolean searchRemoteMore;
-    private boolean emptySearch(){return currentTab==4&&catalogQuery.isEmpty();}
-    private boolean liveQuery(){return currentTab==4&&!catalogQuery.isEmpty();}
-    private void bufferSearch(String raw){String text=CatalogText.render(raw,catalogNickname());if(text!=null&&searchKnown.add(text))searchPending.add(raw);}
-    private void drainSearch(int count){int end=options.size()+Math.max(0,count);while(!searchPending.isEmpty()&&options.size()<end)appendOption(searchPending.remove(0));catalogHasMore=!searchPending.isEmpty()||searchRemoteMore;}
+    private SearchController messageSearch;
+    private boolean emptySearch(){return currentTab==4&&!CatalogSearch.canSearch(catalogQuery);}
+    private boolean liveQuery(){return currentTab==4&&CatalogSearch.canSearch(catalogQuery);}
     private final Runnable liveSearch=()->{if(currentTab==4&&!isFinishing()&&!isDestroyed())freshSuggestions();};
     private String activeCategory(){return currentTab==4?"همه":category;}
     private String activeQuery(){return currentTab==4?catalogQuery:"";}
@@ -100,6 +96,14 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         regularFont=getResources().getFont(R.font.vazirmatn_regular);mediumFont=getResources().getFont(R.font.vazirmatn_medium);
         store = new AppStore(this);
+        messageSearch=new SearchController(this,store,this::catalogTransport,(rows,more,loading,error)->{
+            if(!liveQuery()||isFinishing()||isDestroyed())return;
+            List<String> rendered=new ArrayList<>();for(String raw:rows){String text=CatalogText.render(raw,catalogNickname());if(text!=null)rendered.add(text);}
+            boolean changed=!rendered.equals(options)||catalogHasMore!=more||refreshingSuggestions!=loading||catalogNetworkFailed!=(error!=null);
+            if(!changed)return;
+            options.clear();credits.clear();for(String raw:rows)appendOption(raw);
+            catalogHasMore=more;refreshingSuggestions=loading;catalogNetworkFailed=error!=null;renderCatalogResults();
+        });
         draft = store.settings().copy();
         android.content.SharedPreferences format=getSharedPreferences("catalog_format",0);
         if(format.getInt("version",0)<3){store.clearCatalog();new CloudConfig(this).catalogUpdatedReset();format.edit().putInt("version",3).apply();}
@@ -147,12 +151,13 @@ public class MainActivity extends Activity {
     @Override protected void onPause() {
         searchKeyboardRequested=false;
         handler.removeCallbacks(refresh);
-        handler.removeCallbacks(liveSearch);
+        handler.removeCallbacks(liveSearch);if(messageSearch!=null)messageSearch.cancel();
         super.onPause();
     }
 
     @Override protected void onDestroy() {
         handler.removeCallbacks(refresh);handler.removeCallbacks(liveSearch);
+        if(messageSearch!=null)messageSearch.close();
         if (activeEditorDialog != null) activeEditorDialog.dismiss();
         super.onDestroy();
     }
@@ -233,12 +238,14 @@ public class MainActivity extends Activity {
         LinearLayout bar=horizontal();bar.setMinimumHeight(dp(56));bar.setPadding(dp(8),dp(2),dp(12),dp(2));bar.setBackgroundColor(BG);
         bar.addView(toolbarAction("بازگشت به پیشنهادها",R.drawable.ic_back,()->selectTab(0)),new LinearLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH)));
         LinearLayout field=horizontal();field.setMinimumHeight(dp(UiMetrics.TOUCH));field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,LINE));
-        EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(16);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackgroundColor(Color.TRANSPARENT);search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(10),dp(4),dp(4),dp(4));search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        EditText search=input(catalogSearchDraft,"جست‌وجو؛ حداقل ۲ حرف…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(16);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackgroundColor(Color.TRANSPARENT);search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(10),dp(4),dp(4),dp(4));search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setPadding(dp(15),dp(15),dp(15),dp(15));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
         searchInput=search;
         watch(search,value->{
             catalogSearchDraft=value;catalogQuery=value.trim();catalogNetworkFailed=false;clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
-            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=liveQuery()&&new CloudConfig(this).enabled();renderCatalogResults();if(liveQuery())handler.postDelayed(liveSearch,350);
+            handler.removeCallbacks(liveSearch);browseGeneration++;messageSearch.cancel();catalogCursor=null;usingOfflineCatalog=true;
+            options.clear();credits.clear();catalogHasMore=false;refreshingSuggestions=liveQuery();renderCatalogResults();
+            if(liveQuery())handler.postDelayed(liveSearch,350);
         });
         search.setOnFocusChangeListener((v,focused)->field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,focused?ACCENT:LINE)));
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
@@ -273,7 +280,7 @@ public class MainActivity extends Activity {
     private void selectTab(int tab){
         if(tab==4&&currentTab==4){searchKeyboardRequested=true;searchKeyboardAttempts=0;focusSearchInput();return;}
         if(currentTab==4&&tab!=4&&searchInput!=null){android.view.inputmethod.InputMethodManager ime=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);if(ime!=null)ime.hideSoftInputFromWindow(searchInput.getWindowToken(),0);}
-        handler.removeCallbacks(liveSearch);browseGeneration++;currentTab=tab;
+        handler.removeCallbacks(liveSearch);messageSearch.cancel();browseGeneration++;currentTab=tab;
         searchKeyboardRequested=tab==4;searchKeyboardAttempts=0;
         if(tab==4){catalogQuery="";catalogSearchDraft="";}
         if(tab==0||tab==4){usingOfflineCatalog=true;renewOptions();render();if(tab==0||liveQuery())freshSuggestions();}
@@ -353,9 +360,12 @@ public class MainActivity extends Activity {
     private void freshSuggestions(){loadCatalogPage(true);}
     private void loadCatalogPage(boolean reset){
         catalogRequested=true;
+        if(currentTab==4){
+            if(emptySearch()){handler.removeCallbacks(liveSearch);messageSearch.cancel();renewOptions();renderCatalogResults();return;}
+            if(reset)messageSearch.start(catalogQuery,store.settings().tone);else messageSearch.more();return;
+        }
         if(emptySearch()){handler.removeCallbacks(liveSearch);browseGeneration++;renewOptions();renderCatalogResults();return;}
         if(!reset&&refreshingSuggestions)return;
-        if(!reset&&liveQuery()&&!searchPending.isEmpty()){drainSearch(20);renderCatalogResults();return;}
         if(reset){catalogNetworkFailed=false;browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
         CloudConfig cloud=new CloudConfig(this);
         if(!cloud.enabled()||(!reset&&usingOfflineCatalog)){
@@ -383,15 +393,9 @@ public class MainActivity extends Activity {
                         org.json.JSONArray rows=data.getJSONArray("messages");
                         boolean usable=false;for(int i=0;i<rows.length();i++)if(CatalogText.render(rows.getJSONObject(i).getString("body"),catalogNickname())!=null){usable=true;break;}
                         if(usable||!query.isEmpty()){
-                            if(liveQuery()){
-                                for(int i=0;i<rows.length();i++)bufferSearch(rows.getJSONObject(i).getString("body"));
-                                searchRemoteMore=data.optBoolean("has_more",false);drainSearch(reset?Math.max(0,20-options.size()):20);
-                                usingOfflineCatalog=rows.length()==0;
-                            }else{
-                                if(reset){options.clear();credits.clear();}
-                                for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
-                                catalogHasMore=data.optBoolean("has_more",false);
-                            }
+                            if(reset){options.clear();credits.clear();}
+                            for(int i=0;i<rows.length();i++)appendOption(rows.getJSONObject(i).getString("body"));
+                            catalogHasMore=data.optBoolean("has_more",false);
                             catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);
                         }else{
                             usingOfflineCatalog=true;
@@ -400,7 +404,7 @@ public class MainActivity extends Activity {
                         }
                         cloud.catalogUpdated();
                     }catch(Exception ignored){cloud.error("پاسخ جست‌وجو معتبر نیست.");}
-                }else{catalogNetworkFailed=true;cloud.error(error);usingOfflineCatalog=true;if(liveQuery()){searchRemoteMore=false;catalogHasMore=!searchPending.isEmpty();}else if(reset&&options.isEmpty())renewOptions();}
+                }else{catalogNetworkFailed=true;cloud.error(error);usingOfflineCatalog=true;if(reset&&options.isEmpty())renewOptions();}
                 renderCatalogResults();
             });
         },"delneveshte-catalog-browse").start();
@@ -427,11 +431,9 @@ public class MainActivity extends Activity {
         for(int i=0;i<Math.min(20,rows.size());i++)appendOption(rows.get(i));localCatalogOffset+=20;
     }
     private void renewOptions(){
-        options.clear();credits.clear();localCatalogOffset=0;searchPending.clear();searchKnown.clear();searchRemoteMore=false;
+        options.clear();credits.clear();localCatalogOffset=0;
         if(emptySearch()){catalogHasMore=false;catalogCursor=null;refreshingSuggestions=false;return;}
-        if(liveQuery()){
-            for(int offset=0;;offset+=20){List<String> rows=store.localCatalogPage("همه",catalogQuery,offset,catalogNickname(),store.settings().tone);for(int i=0;i<Math.min(20,rows.size());i++)bufferSearch(rows.get(i));if(rows.size()<=20)break;}
-            for(String raw:offlinePool())bufferSearch(raw);drainSearch(20);
+        if(currentTab==4){catalogHasMore=false;refreshingSuggestions=false;return;
         }else appendLocalPage();
     }
 
@@ -699,7 +701,7 @@ public class MainActivity extends Activity {
         toneToggle.setOnCheckedChangeListener((toggle,checked)->{
             String value=checked?"formal":"colloquial";store.saveTone(value);draft.tone=value;
             toggle.setText(checked?"رسمی":"محاوره‌ای");toggle.setContentDescription("لحن پیام‌ها: "+(checked?"رسمی":"محاوره‌ای"));
-            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;renewOptions();
+            handler.removeCallbacks(liveSearch);messageSearch.cancel();browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;renewOptions();
         });
         toneCard.addView(toneToggle,match());
         toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);

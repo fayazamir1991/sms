@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Upload-only synchronization: a server can never enqueue or send an SMS on this phone. */
 public final class CloudSync {
     private static final Object LOCK=new Object();
-    public interface Transport { JSONObject request(String path,JSONObject body) throws Exception; }
+    public interface Transport { JSONObject request(String path,JSONObject body) throws Exception; default void cancel() { } }
     private CloudSync() { }
     public static boolean run(Context context,AtomicBoolean stopped) {
         synchronized(LOCK) {

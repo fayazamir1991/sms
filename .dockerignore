@@ -26,3 +26,5 @@
 !server/migrations/0009_catalog_search.sql
 
 !server/migrations/0010_reports.sql
+
+!server/migrations/0011_catalog_tones.sql

@@ -51,7 +51,7 @@ assert.equal(login.status,200);
 const cookie=login.headers.get('set-cookie').split(';')[0],{csrf}=await login.json();
 const headers={Cookie:cookie,Origin:origin,'X-CSRF':csrf,'Content-Type':'application/json'};
 const stats=await (await fetch(base+'/api/admin/stats',{headers})).json();
-assert.ok(stats.catalog>=1002);
+assert.ok(stats.catalog>=3002,'The paired catalog and 2000 new messages must be seeded before readiness');
 const {readFileSync}=await import('node:fs');
 const corpus=JSON.parse(readFileSync('./data/imports/ganjoor-report.json','utf8'));
 const {gunzipSync}=await import('node:zlib');
@@ -77,6 +77,10 @@ if(process.env.SMOKE_PHASE==='write'){
  assert.equal((await post('/api/v1/installations/register',{app_version:'0.3.0'})).status,201);
  const suggestions=await (await fetch(base+'/api/v1/messages/suggestions?limit=5',{headers:{Authorization:auth}})).json();assert.equal(suggestions.messages.length,5);
  const browse=await (await fetch(base+'/api/v1/messages/browse',{headers:{Authorization:auth}})).json();assert.equal(browse.messages.length,20);
+ for(const row of browse.messages)if(row.category!=='شعر'){assert.ok(row.body_formal&&row.body_colloquial);assert.equal(row.body,row.body_colloquial);}
+ const formal=await (await fetch(base+'/api/v1/messages/browse?tone=formal&category='+encodeURIComponent('صمیمی'),{headers:{Authorization:auth}})).json();
+ assert.equal(formal.messages.length,20);for(const row of formal.messages)assert.equal(row.body,row.body_formal);
+ const composed=bank.groups.find(g=>g.id==='source').rows.find(r=>r.key==='دل‌نوشته؛ نگارش مستقل');assert.equal(composed.value,2000);
  for(const q of ['عشق',browse.messages[0].body.slice(0,12)]){
   const search=await (await fetch(base+'/api/v1/messages/browse?q='+encodeURIComponent(q),{headers:{Authorization:auth}})).json();assert.ok(search.messages.length>0,'Real Docker search must find '+q);
  }

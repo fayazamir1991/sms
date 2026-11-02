@@ -46,7 +46,7 @@ public class UiControlsTest {
     private static class TextViewCheck {
         static void assertChipSpacing(android.widget.TextView chip,float density){assertTrue(chip.getPaddingLeft()>=Math.round(12*density));assertTrue(chip.getPaddingRight()>=Math.round(12*density));}
     }
-    @Test public void searchClearHasASquareTouchTargetAndClearsLiveResults(){
+    @Test public void searchClearHasASquareTouchTargetAndClearsLiveResults() throws Exception {
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();View home=a.getWindow().getDecorView();checkIconButtons(home);
             TextViewCheck.assertChipSpacing(CatalogBrowsingTest.text(home,"همه"),app.getResources().getDisplayMetrics().density);CatalogBrowsingTest.text(home,"جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();
@@ -54,7 +54,7 @@ public class UiControlsTest {
             View clear=CatalogBrowsingTest.described(root,"پاک‌کردن جست‌وجو");assertTrue(clear.isEnabled());
             View fieldContainer=(View)clear.getParent();assertEquals(0,fieldContainer.getPaddingTop());assertEquals(0,fieldContainer.getPaddingBottom());int size=Math.round(48*app.getResources().getDisplayMetrics().density);clear.measure(View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY));clear.layout(0,0,size,size);
             long now=android.os.SystemClock.uptimeMillis();android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,2,2,0),up=android.view.MotionEvent.obtain(now,now+10,android.view.MotionEvent.ACTION_UP,2,2,0);
-            assertTrue(clear.dispatchTouchEvent(down));assertTrue(clear.dispatchTouchEvent(up));down.recycle();up.recycle();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());
+            assertTrue(clear.dispatchTouchEvent(down));assertTrue(clear.dispatchTouchEvent(up));down.recycle();up.recycle();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());assertTrue(CatalogBrowsingTest.options(a).isEmpty());
         }
     }
     @Test public void settingsOnlyExposeDestinationCountAndGeneralAndroidHelp(){

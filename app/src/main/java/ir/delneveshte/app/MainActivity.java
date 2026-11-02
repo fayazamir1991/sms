@@ -60,6 +60,9 @@ public class MainActivity extends Activity {
     private ir.delneveshte.app.Settings draft;
     private LinearLayout page;
     private ScrollView pageScroll;
+    private EditText searchInput;
+    private boolean searchKeyboardRequested;
+    private int searchKeyboardAttempts;
     private EditText activeEditor;
     private AlertDialog activeEditorDialog;
     private int currentTab;
@@ -71,6 +74,7 @@ public class MainActivity extends Activity {
     private final List<String> searchPending=new ArrayList<>();
     private final java.util.Set<String> searchKnown=new java.util.HashSet<>();
     private boolean searchRemoteMore;
+    private boolean emptySearch(){return currentTab==4&&catalogQuery.isEmpty();}
     private boolean liveQuery(){return currentTab==4&&!catalogQuery.isEmpty();}
     private void bufferSearch(String raw){String text=CatalogText.render(raw,catalogNickname());if(text!=null&&searchKnown.add(text))searchPending.add(raw);}
     private void drainSearch(int count){int end=options.size()+Math.max(0,count);while(!searchPending.isEmpty()&&options.size()<end)appendOption(searchPending.remove(0));catalogHasMore=!searchPending.isEmpty()||searchRemoteMore;}
@@ -111,7 +115,9 @@ public class MainActivity extends Activity {
             draft.endMinute = savedInstanceState.getInt("draft_end", draft.endMinute);
             draft.subscriptionId = savedInstanceState.getInt("draft_sim", draft.subscriptionId);
         }
+        searchKeyboardRequested=currentTab==4;
         Window window = getWindow();
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         window.setStatusBarColor(AppThemeTokens.STATUS_BAR);
         window.setNavigationBarColor(Color.WHITE);
         window.getDecorView().setSystemUiVisibility(
@@ -139,10 +145,11 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(refresh);
         handler.postDelayed(refresh, 8000);
         CloudConfig cloud=new CloudConfig(this);
-        if((currentTab==0||currentTab==4)&&cloud.enabled()&&(!catalogRequested||currentTab==4)&&activeEditorDialog==null)freshSuggestions();
+        if((currentTab==0||liveQuery())&&cloud.enabled()&&(!catalogRequested||currentTab==4)&&activeEditorDialog==null)freshSuggestions();
     }
 
     @Override protected void onPause() {
+        searchKeyboardRequested=false;
         handler.removeCallbacks(refresh);
         handler.removeCallbacks(liveSearch);
         super.onPause();
@@ -176,7 +183,7 @@ public class MainActivity extends Activity {
     }
 
     private void render() {
-        catalogResults=null;
+        catalogResults=null;searchInput=null;
         LinearLayout root = vertical();
         root.setBackgroundColor(BG);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -204,6 +211,7 @@ public class MainActivity extends Activity {
         }
         root.addView(navigation(),new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
+        if(currentTab==4&&searchKeyboardRequested)focusSearchInput();
     }
 
     private View appHeader(){
@@ -227,9 +235,10 @@ public class MainActivity extends Activity {
         LinearLayout field=horizontal();field.setMinimumHeight(dp(UiMetrics.TOUCH));field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,LINE));
         EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(16);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackgroundColor(Color.TRANSPARENT);search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(10),dp(4),dp(4),dp(4));search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setPadding(dp(15),dp(15),dp(15),dp(15));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
+        searchInput=search;
         watch(search,value->{
             catalogSearchDraft=value;catalogQuery=value.trim();catalogNetworkFailed=false;clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
-            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
+            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=liveQuery()&&new CloudConfig(this).enabled();renderCatalogResults();if(liveQuery())handler.postDelayed(liveSearch,350);
         });
         search.setOnFocusChangeListener((v,focused)->field.setBackground(controlBackground(Color.WHITE,12,UiMetrics.BUTTON_INSET,focused?ACCENT:LINE)));
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
@@ -262,9 +271,26 @@ public class MainActivity extends Activity {
     }
 
     private void selectTab(int tab){
+        if(tab==4&&currentTab==4){searchKeyboardRequested=true;searchKeyboardAttempts=0;focusSearchInput();return;}
+        if(currentTab==4&&tab!=4&&searchInput!=null){android.view.inputmethod.InputMethodManager ime=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);if(ime!=null)ime.hideSoftInputFromWindow(searchInput.getWindowToken(),0);}
         handler.removeCallbacks(liveSearch);browseGeneration++;currentTab=tab;
-        if(tab==0||tab==4){usingOfflineCatalog=true;renewOptions();render();freshSuggestions();}
+        searchKeyboardRequested=tab==4;searchKeyboardAttempts=0;
+        if(tab==4){catalogQuery="";catalogSearchDraft="";}
+        if(tab==0||tab==4){usingOfflineCatalog=true;renewOptions();render();if(tab==0||liveQuery())freshSuggestions();}
         else render();
+    }
+    @Override public void onWindowFocusChanged(boolean focused){
+        super.onWindowFocusChanged(focused);if(focused&&currentTab==4&&searchKeyboardRequested)focusSearchInput();
+    }
+    private void focusSearchInput(){
+        final EditText field=searchInput;if(currentTab!=4||field==null||!searchKeyboardRequested)return;
+        if(!field.hasFocus()){field.requestFocus();field.setSelection(field.length());}
+        field.post(()->{
+            if(currentTab!=4||searchInput!=field||!searchKeyboardRequested||!field.isAttachedToWindow()||!hasWindowFocus())return;
+            android.view.inputmethod.InputMethodManager ime=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if(ime!=null&&ime.showSoftInput(field,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)){searchKeyboardRequested=false;}
+            else if(++searchKeyboardAttempts<4)field.postDelayed(this::focusSearchInput,100);
+        });
     }
 
     private ImageButton compactAction(String description,int icon,Runnable action){
@@ -283,10 +309,7 @@ public class MainActivity extends Activity {
     private void renderCatalogResults(){
         if((currentTab!=0&&currentTab!=4)||catalogResults==null)return;
         LinearLayout target=catalogResults;target.removeAllViews();
-        String status="پیام‌ها: "+fa(options.size());
-        if(refreshingSuggestions)status+=" · در حال دریافت…";
-        else if(usingOfflineCatalog)status+=" · روی گوشی";
-        TextView summary=label(status,12,MUTED,false);summary.setPadding(dp(16),dp(4),dp(16),dp(10));target.addView(summary);
+        if(emptySearch())return;
         if(options.isEmpty())target.addView(body(refreshingSuggestions?"در حال جست‌وجو…":"پیامی پیدا نشد.",14));
         if(options.isEmpty()&&!refreshingSuggestions&&catalogNetworkFailed&&currentTab==4)target.addView(body("برای جست‌وجو در کل بانک، اتصال به سرور را بررسی کن.",13));
         for(String text:options){
@@ -329,6 +352,7 @@ public class MainActivity extends Activity {
     private void freshSuggestions(){loadCatalogPage(true);}
     private void loadCatalogPage(boolean reset){
         catalogRequested=true;
+        if(emptySearch()){handler.removeCallbacks(liveSearch);browseGeneration++;renewOptions();renderCatalogResults();return;}
         if(!reset&&refreshingSuggestions)return;
         if(!reset&&liveQuery()&&!searchPending.isEmpty()){drainSearch(20);renderCatalogResults();return;}
         if(reset){catalogNetworkFailed=false;browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
@@ -402,6 +426,7 @@ public class MainActivity extends Activity {
     }
     private void renewOptions(){
         options.clear();credits.clear();localCatalogOffset=0;searchPending.clear();searchKnown.clear();searchRemoteMore=false;
+        if(emptySearch()){catalogHasMore=false;catalogCursor=null;refreshingSuggestions=false;return;}
         if(liveQuery()){
             for(int offset=0;;offset+=20){List<String> rows=store.localCatalogPage("همه",catalogQuery,offset,catalogNickname());for(int i=0;i<Math.min(20,rows.size());i++)bufferSearch(rows.get(i));if(rows.size()<=20)break;}
             for(String raw:offlinePool())bufferSearch(raw);drainSearch(20);

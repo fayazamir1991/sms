@@ -1,0 +1,105 @@
+{
+  "version": "7.3.1",
+  "style": "Free Classic Solid",
+  "license": "CC BY 4.0",
+  "icons": [
+    {
+      "resource": "ic_home",
+      "icon": "comment-dots",
+      "source_sha": "25d743d5c903452612ebd148ac1fc7805c419d91",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/comment-dots.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_search",
+      "icon": "magnifying-glass",
+      "source_sha": "435330b3c5155f634cf09ee3614975be6fa1ed84",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/magnifying-glass.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_queue",
+      "icon": "list-check",
+      "source_sha": "bbdafc484b8e3983264e045abf2c95b8e3e096d0",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/list-check.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_history",
+      "icon": "clock-rotate-left",
+      "source_sha": "aec098ec8d42e891bbd9fdea298c01bf29c8e626",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/clock-rotate-left.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_settings",
+      "icon": "gear",
+      "source_sha": "e873cf21c78d04b62b9193bd56b58f1a7809be6d",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/gear.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_close",
+      "icon": "xmark",
+      "source_sha": "62d72274c7e20c11cf98644ca0a3ac8ee2096e00",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/xmark.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_clock",
+      "icon": "clock",
+      "source_sha": "d4ea8125cc62879180d6a7adf3140ea81963a451",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/clock.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_compose",
+      "icon": "pen-to-square",
+      "source_sha": "d1225d5d25463158b0ba124d162f11731f30122b",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/pen-to-square.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_back",
+      "icon": "arrow-right",
+      "source_sha": "f37a77c5dda3934a968a8cc1a0131d8eabb36cf4",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/arrow-right.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_check",
+      "icon": "check",
+      "source_sha": "eec726c3b241623128da937b379d3ca817beda6e",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/check.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_send",
+      "icon": "paper-plane",
+      "source_sha": "23cdb8f7ffc7cb520fd114b2c38bb29a9da68052",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/paper-plane.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_edit_schedule",
+      "icon": "pen-to-square",
+      "source_sha": "d1225d5d25463158b0ba124d162f11731f30122b",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/pen-to-square.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_info",
+      "icon": "circle-info",
+      "source_sha": "bffb10b459813d8b7fc30cdf61c0571117fd52d9",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/circle-info.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    },
+    {
+      "resource": "ic_copy",
+      "icon": "copy",
+      "source_sha": "14c537851786b0d6dec7b5e628706c215db4b6c9",
+      "source_url": "https://github.com/FortAwesome/Font-Awesome/blob/7.3.1/svgs/solid/copy.svg",
+      "adaptation": "SVG path and viewBox preserved; Android VectorDrawable; runtime tint"
+    }
+  ]
+}

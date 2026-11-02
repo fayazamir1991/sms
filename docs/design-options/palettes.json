@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "title": "لاکی و طلایی",
+    "subtitle": "پرشوق، درخشان و متعادل — پیشنهاد من",
+    "gold_ink": "#8D6D13",
+    "primary": "#C81D25",
+    "highlight": "#FF5A36",
+    "gold": "#D4AF37",
+    "canvas": "#FFFAF2",
+    "surface": "#FFFFFF",
+    "ink": "#241915",
+    "muted": "#796B62",
+    "soft": "#FFF0DC"
+  },
+  {
+    "id": 2,
+    "title": "ورمیلیون و شامپاینی",
+    "subtitle": "جسور، شاداب و گرم",
+    "gold_ink": "#8C5C1A",
+    "primary": "#C52A0C",
+    "highlight": "#FF7A18",
+    "gold": "#EDC37D",
+    "canvas": "#FFF8ED",
+    "surface": "#FFFFFF",
+    "ink": "#2B1D16",
+    "muted": "#806F5F",
+    "soft": "#FFF0D6"
+  },
+  {
+    "id": 3,
+    "title": "زرشکی و طلایی",
+    "subtitle": "عمیق، باوقار و لوکس؛ آرام‌تر",
+    "gold_ink": "#876019",
+    "primary": "#940F1D",
+    "highlight": "#DA322F",
+    "gold": "#C9A24D",
+    "canvas": "#FBF5E9",
+    "surface": "#FFFFFF",
+    "ink": "#241918",
+    "muted": "#7B6A63",
+    "soft": "#F6EBD5"
+  },
+  {
+    "id": 4,
+    "title": "قرمز و گرافیت",
+    "subtitle": "تیره، پرکنتراست و چشمگیر",
+    "gold_ink": "#E9B44C",
+    "primary": "#D2221B",
+    "highlight": "#FF612B",
+    "gold": "#E9B44C",
+    "canvas": "#151719",
+    "surface": "#24272B",
+    "ink": "#F8F4EC",
+    "muted": "#BEB6AA",
+    "soft": "#34312B"
+  }
+]

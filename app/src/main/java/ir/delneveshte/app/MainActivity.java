@@ -697,7 +697,20 @@ public class MainActivity extends Activity {
         phoneHelp.addView(body("برای آزمون اول، یک متن را تأیید کن و در صف «ارسال همین حالا» را بزن؛ سپس ثبت آن را در گفت‌وگوی همسرت در Google Messages ببین. محدودیت‌های گوشی و نصب باید روی همین دستگاه بررسی شوند.", 13));
         page.addView(phoneHelp);
         cloudSettings();
+        addPage(button("درباره و مجوزها",false,this::showLicenses),0,8);
         addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "\nصف همیشه ابتدا روی گوشی ذخیره می‌شود. همگام‌سازی به اینترنت و اجازهٔ اجرای پس‌زمینه نیاز دارد.", 12), 0, 0);
+    }
+
+    private void showLicenses(){
+        LinearLayout content=dialogContent();
+        content.addView(body("آیکن‌ها: Font Awesome Free 7.3.1، اثر Fonticons, Inc.\nآیکن‌های SVG با حفظ مسیرها به VectorDrawable اندروید تبدیل شده‌اند؛ رنگ آن‌ها با تم برنامه هماهنگ می‌شود.\nفونت فارسی: وزیرمتن.",14));
+        for(int resource:new int[]{R.raw.fontawesome_license,R.raw.vazirmatn_license}){
+            try(java.io.InputStream input=getResources().openRawResource(resource);java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream()){
+                byte[] buffer=new byte[4096];int read;while((read=input.read(buffer))!=-1)bytes.write(buffer,0,read);
+                TextView license=body(new String(bytes.toByteArray(),java.nio.charset.StandardCharsets.UTF_8),12);license.setTextIsSelectable(true);content.addView(license);
+            }catch(java.io.IOException error){content.addView(body("اطلاعات منابع در مستندات محصول ثبت شده است.",12));}
+        }
+        new AlertDialog.Builder(this).setTitle("درباره و مجوزها").setView(scrollDialog(content)).setPositiveButton("بستن",null).show();
     }
 
     private static final String CLOUD_DISCLOSURE = "همگام‌سازی به‌صورت پیش‌فرض فعال است. هنگام اتصال به اینترنت، متن پیام‌های تأییدشده، شمارهٔ گیرنده و وضعیت ارسال آن‌ها همراه شناسهٔ نصب به سرور محصول فرستاده می‌شود و مدیر محصول آن‌ها را می‌بیند. پیامک‌های دیگر گوشی خوانده نمی‌شوند. ارسال پیامک همچنان از سیم‌کارت تو انجام می‌شود.";

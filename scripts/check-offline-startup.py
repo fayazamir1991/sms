@@ -7,6 +7,13 @@ import time
 from version import read_version
 
 PACKAGE = 'ir.delneveshte.app'
+PREVIEWS = Path('docs/previews') / ('v' + read_version()[1])
+PREVIEWS.mkdir(parents=True, exist_ok=True)
+
+def screenshot(name):
+    with (PREVIEWS / ('preview-' + name + '.png')).open('wb') as output:
+        subprocess.run(['adb', 'exec-out', 'screencap', '-p'], stdout=output, check=True)
+
 APK = Path('release-input') / ('delneveshte-' + read_version()[1] + '.apk')
 
 def adb(*args):
@@ -39,6 +46,7 @@ assert count(root)>0
 adb('install','-r',str(APK))
 root = launch()
 print('PASS: preserved-signature update from 0.8.1, first offline launch shows', count(root), 'messages')
+screenshot('home')
 for category in ['کوتاه', 'همه']:
     root = ui()
     node = next((n for n in root.iter('node') if n.get('text') == category), None)
@@ -62,6 +70,7 @@ card=next(n for n in root.iter('node') if any(c.get('class')=='android.widget.Te
 body=next(c for c in card if c.get('class')=='android.widget.TextView')
 tap_node(root,text=body.get('text'))
 menu=ui();labels={n.get('text') for n in menu.iter('node')}
+screenshot('message-menu')
 assert {'ارسال همین حالا','ارسال در زمان تصادفی','ارسال در زمان دلخواه','ویرایش متن','اطلاعات منبع'}<=labels
 adb('shell','input','keyevent','4')
 print('PASS: compact message card has two icon actions and tap opens the full context menu.')
@@ -72,3 +81,7 @@ adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));adb('shell','input','
 root=ui();assert any(n.get('text','').startswith('پیام‌ها: ۰') for n in root.iter('node')), 'Typing must change results without submitting'
 tap_node(root,description='پاک‌کردن جست‌وجو');assert count(ui())>0
 print('PASS: dedicated live search changes results while typing, and clear restores messages without a search button.')
+
+screenshot('search')
+root=launch();tap_node(root,text='تنظیمات');ui();screenshot('settings')
+print('PASS: real APK previews captured: home, context menu, live search and settings.')

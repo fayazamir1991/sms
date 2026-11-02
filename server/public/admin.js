@@ -29,7 +29,7 @@ async function load(){
  }catch(e){if(loadId===state.loadId){$('notice').textContent=e.message;$('connection').textContent='نیاز به بررسی';}}
  finally{if(loadId===state.loadId)document.body.removeAttribute('aria-busy');}
 }
-const chartColors=['#943852','#4f8070','#bb8b42','#786b9b','#b4687b','#608798'];
+const chartColors=['#c8324d','#b47d8f','#a67c35','#8d445c','#d3a7b6','#78604d'];
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
 function svgElement(tag,attrs={}){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value]of Object.entries(attrs))node.setAttribute(key,String(value));return node;}
 function dataTable(rows,firstTitle='عنوان'){

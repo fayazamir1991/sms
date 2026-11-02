@@ -10,10 +10,14 @@ named_apk="${RUNNER_TEMP}/delneveshte-${app_version}.apk"
 # Existing releases are immutable: a version number must change for a new release.
 if ! gh release view "$release_tag" >/dev/null 2>&1; then
   cp "$apk_path" "$named_apk"
+  assets=("$named_apk")
+  for preview in "docs/previews/${release_tag}"/preview-*.png; do
+    if [[ -f "$preview" ]]; then assets+=("$preview"); fi
+  done
   notes="docs/releases/${release_tag}.md"
   if [[ -f "$notes" ]]; then
-    gh release create "$release_tag" "$named_apk" --target "$GITHUB_SHA" --title "دل‌نوشته ${app_version}" --notes-file "$notes" --prerelease
+    gh release create "$release_tag" "${assets[@]}" --target "$GITHUB_SHA" --title "دل‌نوشته ${app_version}" --notes-file "$notes" --prerelease
   else
-    gh release create "$release_tag" "$named_apk" --target "$GITHUB_SHA" --title "دل‌نوشته ${app_version}" --generate-notes --prerelease
+    gh release create "$release_tag" "${assets[@]}" --target "$GITHUB_SHA" --title "دل‌نوشته ${app_version}" --generate-notes --prerelease
   fi
 fi

@@ -1,0 +1,4 @@
+<resources>
+ <color name="brand_red">#C8324D</color><color name="dusty_pink">#B47D8F</color><color name="brand_gold">#A67C35</color>
+ <color name="surface">#FFFFFF</color><color name="page_background">#FBF7F4</color><color name="main_text">#2B2026</color><color name="secondary_text">#7D6C75</color>
+</resources>

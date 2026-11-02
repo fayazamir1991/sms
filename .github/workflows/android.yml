@@ -91,6 +91,18 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: python3 scripts/check-offline-startup.py
+      - name: Preserve actual APK interface previews
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          preview_dir="docs/previews/v$(python3 scripts/version.py)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$preview_dir"
+          if ! git diff --cached --quiet; then
+            git commit -m "Add Android interface previews for $(python3 scripts/version.py)"
+            git push origin HEAD:main
+          fi
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'
         with:

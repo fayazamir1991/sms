@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.FrameLayout;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -48,18 +49,19 @@ import java.util.Random;
 
 /** Local approvals and optional cloud synchronization. No SMS is sent on launch. */
 public class MainActivity extends Activity {
-    private static final int BG = Color.rgb(255, 249, 245);
-    private static final int INK = Color.rgb(56, 37, 45);
-    private static final int ROSE = Color.rgb(148, 56, 82);
-    private static final int PALE = Color.rgb(249, 231, 235);
-    private static final int MUTED = Color.rgb(112, 93, 101);
-    private static final int LINE = Color.rgb(235, 220, 224);
-    private static final int GOOD = Color.rgb(42, 107, 82);
+    private static final int BG=AppThemeTokens.BACKGROUND;
+    private static final int INK=AppThemeTokens.TEXT;
+    private static final int ACCENT=AppThemeTokens.ACCENT;
+    private static final int PALE=AppThemeTokens.SOFT_PINK;
+    private static final int MUTED=AppThemeTokens.SECONDARY;
+    private static final int LINE=AppThemeTokens.DIVIDER;
+    private static final int GOOD=AppThemeTokens.SUCCESS;
     private static final int REQUEST_SIM = 102;
     private static final int REQUEST_SMS = 103;
     private static final int REQUEST_NOTIFICATIONS = 104;
     private final Handler handler = new Handler();
     private final Random random = new Random();
+    private Typeface regularFont,mediumFont;
     private AppStore store;
     private ir.delneveshte.app.Settings draft;
     private LinearLayout page;
@@ -97,6 +99,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        regularFont=getResources().getFont(R.font.vazirmatn_regular);mediumFont=getResources().getFont(R.font.vazirmatn_medium);
         store = new AppStore(this);
         draft = store.settings().copy();
         android.content.SharedPreferences format=getSharedPreferences("catalog_format",0);
@@ -116,7 +119,7 @@ public class MainActivity extends Activity {
             draft.subscriptionId = savedInstanceState.getInt("draft_sim", draft.subscriptionId);
         }
         Window window = getWindow();
-        window.setStatusBarColor(BG);
+        window.setStatusBarColor(AppThemeTokens.STATUS_BAR);
         window.setNavigationBarColor(Color.WHITE);
         window.getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
@@ -185,56 +188,82 @@ public class MainActivity extends Activity {
         LinearLayout root = vertical();
         root.setBackgroundColor(BG);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        root.setPadding(0, dp(8), 0, 0);
+        root.setPadding(0,0,0,0);
         root.addView(appHeader());
+        if(currentTab==0)root.addView(categoryTabs());
         ScrollView scroll = new ScrollView(this);
         pageScroll = scroll;
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         page = vertical();
-        page.setPadding(dp(20), dp(8), dp(20), dp(20));
+        page.setPadding(0,dp(8),0,dp(128));
         scroll.addView(page);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        FrameLayout content=new FrameLayout(this);content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        content.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+        root.addView(content,new LinearLayout.LayoutParams(-1,0,1));
         if (currentTab == 0||currentTab==4) suggestionsPage();
         else if (currentTab == 1) queuePage();
         else if (currentTab == 2) historyPage();
         else settingsPage();
-        root.addView(navigation());
-        setContentView(root);
+        if(currentTab==0||currentTab==4){
+            ImageButton compose=compactAction("نوشتن پیام",R.drawable.ic_compose,()->editText(""));
+            compose.setBackground(ripple(ACCENT,28));compose.setColorFilter(Color.WHITE);compose.setElevation(dp(5));compose.setPadding(dp(16),dp(16),dp(16),dp(16));
+            FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(56),dp(56),Gravity.BOTTOM|Gravity.END);fp.setMargins(dp(16),dp(16),dp(16),dp(96));content.addView(compose,fp);
+        }
+        FrameLayout shell=new FrameLayout(this);shell.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);shell.setBackgroundColor(BG);shell.addView(root,new FrameLayout.LayoutParams(-1,-1));
+        FrameLayout.LayoutParams np=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);np.setMargins(dp(12),0,dp(12),dp(12));shell.addView(navigation(),np);
+        setContentView(shell);
     }
 
-    private View appHeader() {
-        LinearLayout row = horizontal();
-        row.setPadding(dp(18), dp(6), dp(18), dp(8));
-        LinearLayout names = vertical();
-        names.addView(label("دل‌نوشته", 22, INK, true));
-        row.addView(names, new LinearLayout.LayoutParams(0, -2, 1));
-        boolean active = store.settings().enabled;
-        String readiness = active ? SmsRuntime.readiness(this) : "";
-        boolean ready = readiness == null || readiness.isEmpty();
-        TextView state = label(active ? (ready ? "●  ارسال روشن" : "●  نیاز به بررسی") : "○  متوقف", 12,
-                active && ready ? GOOD : MUTED, true);
-        state.setPadding(dp(11), dp(9), dp(11), dp(9));
-        state.setBackground(shape(active ? Color.rgb(230, 242, 233) : PALE, 18, 0));
-        state.setContentDescription(active ? "ارسال خودکار فعال است" : "ارسال خودکار متوقف است");
-        state.setOnClickListener(v -> selectTab(3));
-        row.addView(state);
-        return row;
+    private View appHeader(){
+        if(currentTab==4)return searchToolbar();
+        LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(18),0,dp(12),0);bar.setMinimumHeight(dp(64));
+        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.DUSTY_PINK);brand.setBackground(shape(PALE,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
+        LinearLayout title=vertical();String name=currentTab==0?"دل‌نوشته":currentTab==1?"صف ارسال":currentTab==2?"سابقه":"تنظیمات";
+        title.addView(label(name,21,INK,true));
+        boolean active=store.settings().enabled;String status=active?"ارسال فعال":"ارسال متوقف";
+        title.addView(label(status,12,MUTED,false));bar.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        title.setContentDescription(active?"ارسال خودکار فعال است":"ارسال خودکار متوقف است");title.setOnClickListener(v->selectTab(3));
+        if(currentTab!=3){ImageButton search=toolbarAction("جست‌وجو",R.drawable.ic_search,()->selectTab(4));bar.addView(search,new LinearLayout.LayoutParams(dp(48),dp(48)));}
+        return bar;
+    }
+    private ImageButton toolbarAction(String description,int icon,Runnable action){
+        ImageButton button=compactAction(description,icon,action);button.setColorFilter(ACCENT);button.setBackground(ripple(PALE,24));return button;
+    }
+    private View searchToolbar(){
+        LinearLayout bar=horizontal();bar.setMinimumHeight(dp(64));bar.setPadding(dp(12),dp(4),dp(12),dp(4));bar.setBackgroundColor(BG);
+        bar.addView(toolbarAction("بازگشت به پیشنهادها",R.drawable.ic_back,()->selectTab(0)),new LinearLayout.LayoutParams(dp(48),dp(48)));
+        EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);search.setSingleLine(true);search.setTextSize(18);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setBackground(shape(Color.WHITE,22,LINE));search.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);search.setPadding(dp(12),0,dp(12),0);search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        ImageButton clear=toolbarAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setEnabled(!catalogSearchDraft.isEmpty());clear.setAlpha(catalogSearchDraft.isEmpty()?0.35f:1f);
+        watch(search,value->{
+            catalogSearchDraft=value;catalogQuery=value.trim();clear.setEnabled(!value.isEmpty());clear.setAlpha(value.isEmpty()?0.35f:1f);
+            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
+        });
+        search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
+        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(0,dp(48),1);inputParams.setMargins(dp(8),0,dp(8),0);bar.addView(search,inputParams);bar.addView(clear,new LinearLayout.LayoutParams(dp(44),dp(44)));return bar;
+    }
+    private View categoryTabs(){
+        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setBackgroundColor(BG);scroll.setHorizontalScrollBarEnabled(false);scroll.setPadding(dp(12),dp(2),dp(12),dp(8));scroll.setClipToPadding(false);LinearLayout tabs=horizontal();
+        for(String option:TextBank.categories()){
+            boolean selected=option.equals(category);TextView text=label(option,13,selected?Color.WHITE:MUTED,true);text.setGravity(Gravity.CENTER);text.setMinHeight(dp(40));text.setPadding(dp(16),dp(9),dp(16),dp(9));text.setBackground(ripple(selected?ACCENT:Color.WHITE,20));
+            text.setOnClickListener(v->{category=option;freshSuggestions();render();});LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,dp(40));cp.setMarginEnd(dp(6));tabs.addView(text,cp);
+        }
+        scroll.addView(tabs);return scroll;
     }
 
     private View navigation() {
         LinearLayout nav = horizontal();
-        nav.setBackgroundColor(Color.WHITE);
-        nav.setPadding(dp(6), dp(8), dp(6), dp(10));
-        nav.setElevation(dp(5));
+        nav.setBackground(shape(0xf2ffffff,30,LINE));
+        nav.setPadding(dp(6),dp(6),dp(6),dp(6));
+        nav.setElevation(dp(4));
         String[] titles={"پیشنهادها","جست‌وجو","صف ارسال","سابقه","تنظیمات"};
-        int[] tabs={0,4,1,2,3};int[] icons={R.drawable.ic_launcher,R.drawable.ic_search,R.drawable.ic_queue,android.R.drawable.ic_menu_recent_history,android.R.drawable.ic_menu_preferences};
+        int[] tabs={0,4,1,2,3};int[] icons={R.drawable.ic_home,R.drawable.ic_search,R.drawable.ic_queue,R.drawable.ic_history,R.drawable.ic_settings};
         for(int i=0;i<titles.length;i++){
             final int tab=tabs[i];boolean selected=currentTab==tab;
             LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(54));item.setPadding(0,dp(4),0,dp(4));
-            ImageView icon=new ImageView(this);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ROSE:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
-            TextView title=label(titles[i],10,selected?ROSE:MUTED,selected);title.setGravity(Gravity.CENTER);item.addView(title);title.setOnClickListener(v->selectTab(tab));
-            item.setBackground(ripple(selected?PALE:Color.WHITE,14));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));
+            ImageView icon=new ImageView(this);icon.setImageResource(icons[i]);icon.setColorFilter(selected?ACCENT:MUTED);item.addView(icon,new LinearLayout.LayoutParams(dp(22),dp(22)));
+            TextView title=label(titles[i],11,selected?ACCENT:MUTED,selected);title.setGravity(Gravity.CENTER);item.addView(title);title.setOnClickListener(v->selectTab(tab));
+            item.setBackground(ripple(selected?PALE:Color.TRANSPARENT,24));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));
             nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
         }
         return nav;
@@ -247,36 +276,16 @@ public class MainActivity extends Activity {
     }
 
     private ImageButton compactAction(String description,int icon,Runnable action){
-        ImageButton button=new ImageButton(this);button.setImageResource(icon);button.setColorFilter(ROSE);
+        ImageButton button=new ImageButton(this);button.setImageResource(icon);button.setColorFilter(ACCENT);
         button.setContentDescription(description);button.setBackground(ripple(PALE,22));button.setPadding(dp(11),dp(11),dp(11),dp(11));
         button.setOnClickListener(v->action.run());return button;
     }
     private void suggestionsPage(){
-        if(currentTab==4){
-            page.addView(label("جست‌وجو در همهٔ پیام‌ها",18,INK,true));
-            LinearLayout row=horizontal();EditText search=input(catalogSearchDraft,"کلمه یا بخشی از پیام…",InputType.TYPE_CLASS_TEXT);
-            search.setFilters(new InputFilter[]{new InputFilter.LengthFilter(300)});
-            search.setSingleLine(true);search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-            ImageButton clear=compactAction("پاک‌کردن جست‌وجو",R.drawable.ic_close,()->search.setText(""));clear.setEnabled(!catalogSearchDraft.isEmpty());
-            watch(search,value->{
-                catalogSearchDraft=value;catalogQuery=value.trim();clear.setEnabled(!value.isEmpty());
-                handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;usingOfflineCatalog=true;renewOptions();
-                refreshingSuggestions=new CloudConfig(this).enabled();renderCatalogResults();
-                handler.postDelayed(liveSearch,catalogQuery.isEmpty()?0:350);
-            });
-            search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){handler.removeCallbacks(liveSearch);freshSuggestions();return true;}return false;});
-            row.addView(search,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(dp(44),dp(44));cp.setMarginStart(dp(8));row.addView(clear,cp);page.addView(row);
-        }else{
-            HorizontalScrollView categories=new HorizontalScrollView(this);categories.setHorizontalScrollBarEnabled(false);LinearLayout chips=horizontal();
-            for(String option:TextBank.categories()){
-                TextView chip=label(option,13,option.equals(category)?Color.WHITE:ROSE,true);chip.setGravity(Gravity.CENTER);chip.setMinHeight(dp(44));chip.setPadding(dp(16),dp(7),dp(16),dp(7));
-                chip.setBackground(ripple(option.equals(category)?ROSE:Color.WHITE,22));chip.setOnClickListener(v->{category=option;freshSuggestions();render();});
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);cp.setMarginEnd(dp(7));chips.addView(chip,cp);
-            }
-            categories.addView(chips);addPage(categories,0,8);
-        }
         catalogResults=vertical();page.addView(catalogResults,match());renderCatalogResults();
-        addPage(button("نوشتن پیام",false,()->editText("")),8,0);
+    }
+    private LinearLayout messageCard(){
+        LinearLayout view=vertical();view.setPadding(dp(16),dp(14),dp(16),dp(8));view.setBackground(shape(Color.WHITE,20,LINE));view.setElevation(dp(0));
+        LinearLayout.LayoutParams lp=match();lp.setMargins(dp(12),0,dp(12),dp(8));view.setLayoutParams(lp);return view;
     }
 
     private void renderCatalogResults(){
@@ -285,10 +294,10 @@ public class MainActivity extends Activity {
         String status="پیام‌ها: "+fa(options.size());
         if(refreshingSuggestions)status+=" · در حال دریافت…";
         else if(usingOfflineCatalog)status+=" · روی گوشی";
-        target.addView(label(status,12,MUTED,false));
+        TextView summary=label(status,12,MUTED,false);summary.setPadding(dp(16),dp(4),dp(16),dp(10));target.addView(summary);
         if(options.isEmpty())target.addView(body(refreshingSuggestions?"در حال جست‌وجو…":"پیامی پیدا نشد.",14));
         for(String text:options){
-            LinearLayout c=card(Color.WHITE);TextView message=body(text,18);message.setPadding(0,dp(4),0,dp(8));
+            LinearLayout c=messageCard();TextView message=body(text,17);message.setPadding(0,dp(2),0,dp(4));
             message.setOnClickListener(v->messageMenu(c,text));message.setOnLongClickListener(v->{messageMenu(c,text);return true;});
             c.setOnClickListener(v->messageMenu(c,text));c.setOnLongClickListener(v->{messageMenu(c,text);return true;});c.addView(message);
             LinearLayout actions=horizontal();actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
@@ -297,7 +306,7 @@ public class MainActivity extends Activity {
                 if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
             random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(44),dp(44)));
-            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.GOLD);fixed.setBackground(ripple(AppThemeTokens.SOFT_GOLD,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
     }
@@ -309,6 +318,7 @@ public class MainActivity extends Activity {
         menu.getMenu().add(0,4,3,"ویرایش متن").setIcon(R.drawable.ic_edit_schedule);
         menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(android.R.drawable.ic_menu_info_details);
         menu.getMenu().add(0,6,5,"کپی متن").setIcon(android.R.drawable.ic_menu_set_as);
+        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.GOLD:i==3?AppThemeTokens.DUSTY_PINK:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
             switch(item.getItemId()){
@@ -484,7 +494,7 @@ public class MainActivity extends Activity {
         boolean enabled = store.settings().enabled;
         LinearLayout info = card(PALE);
         info.addView(label(enabled ? "ارسال خودکار روشن است" : "ارسال خودکار متوقف است",
-                16, ROSE, true));
+                16, ACCENT, true));
         info.addView(body(enabled
                 ? "ارسال تصادفی در بازهٔ تنظیمات است؛ زمان دلخواه مستقل از آن اجرا می‌شود. محدودیت باتری ممکن است باعث تأخیر شود."
                 : "متن‌ها محفوظ می‌مانند. برای ارسال تصادفی، در تنظیمات ارسال خودکار را روشن کن.", 14));
@@ -496,8 +506,8 @@ public class MainActivity extends Activity {
             return;
         }
         for (Message message : queue) {
-            LinearLayout c = card(Color.WHITE);
-            c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0&&"SCHEDULED".equals(message.status)?"زمان تصادفی: "+formatDate(message.plannedAt):"در انتظار زمان تصادفی",12,ROSE,true));
+            LinearLayout c = messageCard();
+            c.addView(label("FIXED".equals(message.sendMode)?"زمان دلخواه: "+formatDate(message.requestedAt):message.plannedAt>0&&"SCHEDULED".equals(message.status)?"زمان تصادفی: "+formatDate(message.plannedAt):"در انتظار زمان تصادفی",12,ACCENT,true));
             c.addView(body(message.body, 17));
             c.addView(divider());
             c.addView(phoneLabel(message.recipient));
@@ -578,9 +588,9 @@ public class MainActivity extends Activity {
             return;
         }
         for (Message message : history) {
-            LinearLayout c = card(Color.WHITE);
+            LinearLayout c = messageCard();
             c.addView(label(statusTitle(message.status), 14,
-                    "SENT".equals(message.status) ? GOOD : ROSE, true));
+                    "SENT".equals(message.status) ? GOOD : ACCENT, true));
             c.addView(body(message.body, 16));
             c.addView(divider());
             c.addView(phoneLabel(message.recipient));
@@ -599,7 +609,7 @@ public class MainActivity extends Activity {
     private void settingsPage() {
         heading("تنظیمات ارسال", "تعداد و بازهٔ زمانی، به انتخاب تو");
         LinearLayout destination = card(Color.WHITE);
-        destination.addView(label("مقصد و لحن پیام", 17, INK, true));
+        destination.addView(label("مقصد و لحن پیام",15,ACCENT,true));
         destination.addView(fieldTitle("شمارهٔ همسرت"));
         EditText phone = input(draft.recipient, "مثلاً ‎+98912…", InputType.TYPE_CLASS_PHONE);
         phone.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -619,7 +629,7 @@ public class MainActivity extends Activity {
         page.addView(destination);
 
         LinearLayout timing = card(Color.WHITE);
-        timing.addView(label("زمان‌بندی تصادفی", 17, INK, true));
+        timing.addView(label("زمان‌بندی تصادفی",15,ACCENT,true));
         timing.addView(fieldTitle("تعداد پیام در روز (۱ تا ۲۰)"));
         EditText count = input(fa(draft.dailyCount), "تعداد پیام", InputType.TYPE_CLASS_NUMBER);
         count.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2)});
@@ -636,11 +646,11 @@ public class MainActivity extends Activity {
         add(timing, times, 14, 0);
         timing.addView(body("بازه باید در یک روز باشد و ساعت پایان بعد از شروع قرار بگیرد. زمان دقیق هر روز تغییر می‌کند؛ تعداد ارسال از سقف انتخابی تو بیشتر نمی‌شود.", 12));
         page.addView(timing);
-        page.addView(button("ذخیرهٔ تنظیمات", true, this::saveDraft));
+        addPage(button("ذخیرهٔ تنظیمات",true,this::saveDraft),0,16);
 
         LinearLayout control = card(PALE);
         boolean active = store.settings().enabled;
-        control.addView(label(active ? "ارسال خودکار فعال است" : "شروع، هر وقت تو بخواهی", 17, ROSE, true));
+        control.addView(label(active ? "ارسال خودکار فعال است" : "شروع، هر وقت تو بخواهی", 17, ACCENT, true));
         control.addView(body("فقط پیام‌های تأییدشده ارسال می‌شوند. اگر صف خالی باشد، برنامه پیام تازه‌ای را خودسرانه ارسال نمی‌کند.", 14));
         if (active) {
             String readiness = SmsRuntime.readiness(this);
@@ -923,13 +933,12 @@ public class MainActivity extends Activity {
     }
 
     private void heading(String title, String subtitle) {
-        page.addView(label(title, 22, INK, true));
-        addPage(body(subtitle, 14), 3, 20);
+        TextView caption=label(subtitle,13,MUTED,false);caption.setPadding(dp(18),dp(2),dp(18),dp(12));page.addView(caption);
     }
 
     private void empty(String title, String text, String action, Runnable task) {
         LinearLayout c = card(Color.WHITE);
-        TextView icon = label("♡", 48, ROSE, false);
+        TextView icon = label("♡", 48, ACCENT, false);
         icon.setGravity(Gravity.CENTER);
         c.addView(icon);
         TextView t = label(title, 18, INK, true);
@@ -944,7 +953,7 @@ public class MainActivity extends Activity {
 
     private TextView fieldTitle(String title) {
         TextView view = label(title, 13, MUTED, true);
-        view.setPadding(0, dp(18), 0, dp(8));
+        view.setTextColor(ACCENT);view.setPadding(0,dp(16),0,dp(6));
         return view;
     }
 
@@ -975,10 +984,10 @@ public class MainActivity extends Activity {
 
     private LinearLayout card(int color) {
         LinearLayout view = vertical();
-        view.setPadding(dp(18), dp(18), dp(18), dp(18));
-        view.setBackground(shape(color, 20, color == Color.WHITE ? LINE : 0));
+        view.setPadding(dp(16),dp(14),dp(16),dp(14));
+        view.setBackground(shape(color,18,0));
         LinearLayout.LayoutParams lp = match();
-        lp.bottomMargin = dp(14);
+        lp.bottomMargin = dp(16);
         view.setLayoutParams(lp);
         return view;
     }
@@ -988,16 +997,16 @@ public class MainActivity extends Activity {
         view.setText(text == null ? "" : text);
         view.setTextSize(size);
         view.setTextColor(color);
-        view.setTypeface(Typeface.create(bold ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
+        view.setTypeface(bold?mediumFont:regularFont);
         view.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
         view.setGravity(Gravity.RIGHT);
-        view.setIncludeFontPadding(true);
+        view.setIncludeFontPadding(false);
         return view;
     }
 
     private TextView body(String text, int size) {
-        TextView view = label(text, size, MUTED, false);
-        view.setLineSpacing(dp(4), 1.18f);
+        TextView view = label(text,size,size>=16?INK:MUTED,false);
+        view.setLineSpacing(dp(2),1.10f);
         view.setPadding(0, dp(8), 0, dp(8));
         return view;
     }
@@ -1007,12 +1016,12 @@ public class MainActivity extends Activity {
         view.setText(title);
         view.setTextSize(14);
         view.setAllCaps(false);
-        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        view.setTextColor(primary ? Color.WHITE : ROSE);
+        view.setTypeface(mediumFont);
+        view.setTextColor(primary ? Color.WHITE : ACCENT);
         view.setMinHeight(dp(50));
         view.setMinimumHeight(dp(50));
         view.setPadding(dp(12), dp(10), dp(12), dp(10));
-        view.setBackground(ripple(primary ? ROSE : PALE, 14));
+        view.setBackground(ripple(primary?ACCENT:PALE,14));
         view.setStateListAnimator(null);
         view.setContentDescription(title);
         view.setLayoutParams(match());
@@ -1022,7 +1031,7 @@ public class MainActivity extends Activity {
 
     private Button actionButton(String title, int icon, boolean primary, Runnable action) {
         Button view = button(title, primary, action);
-        setButtonIcon(view, icon, primary ? Color.WHITE : ROSE);
+        setButtonIcon(view, icon, primary ? Color.WHITE : ACCENT);
         return view;
     }
 
@@ -1037,13 +1046,13 @@ public class MainActivity extends Activity {
     private EditText input(String text, String hint, int type) {
         EditText view = new EditText(this);
         view.setTextSize(16);
-        view.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        view.setTypeface(regularFont);
         view.setTextColor(INK);
         view.setHintTextColor(MUTED);
         view.setInputType(type);
         view.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
         view.setGravity(Gravity.RIGHT | Gravity.TOP);
-        view.setBackground(shape(BG, 12, LINE));
+        android.graphics.drawable.StateListDrawable fieldBackground=new android.graphics.drawable.StateListDrawable();fieldBackground.addState(new int[]{android.R.attr.state_focused},shape(Color.WHITE,12,ACCENT));fieldBackground.addState(new int[]{},shape(BG,12,LINE));view.setBackground(fieldBackground);
         view.setPadding(dp(14), dp(12), dp(14), dp(12));
         view.setMinHeight(dp(50));
         view.setHint(hint);
@@ -1093,7 +1102,7 @@ public class MainActivity extends Activity {
     }
 
     private RippleDrawable ripple(int color, int radius) {
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(30, 148, 56, 82)),
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24,204,49,91)),
                 shape(color, radius, 0), shape(Color.WHITE, radius, 0));
     }
 
@@ -1102,7 +1111,7 @@ public class MainActivity extends Activity {
     private void addPage(View view, int top, int bottom) { add(page, view, top, bottom); }
     private void add(LinearLayout parent, View view, int top, int bottom) {
         LinearLayout.LayoutParams lp = match();
-        lp.setMargins(0, dp(top), 0, dp(bottom));
+        lp.setMargins(parent==page?dp(12):0,dp(top),parent==page?dp(12):0,dp(bottom));
         parent.addView(view, lp);
     }
     private int dp(int number) { return Math.round(number * getResources().getDisplayMetrics().density); }

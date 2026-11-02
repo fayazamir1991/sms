@@ -61,7 +61,7 @@ public class CatalogBrowsingTest {
         new CloudConfig(app).configure("https://example.test",false);
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();assertEquals(20,options(a).size());assertNull(search(root));assertNull(text(root,"انتخاب تو، ارسال در زمان‌های متفاوت"));
-            text(root,"جست‌وجو").performClick();assertNotNull(search(root));typed(root,"عشق");assertFalse(options(a).isEmpty());for(String body:options(a))assertTrue(CatalogSearch.matches(body,"عشق"));
+            text(root,"جست‌وجو").performClick();assertNotNull(search(root));typed(root,"کنار");assertFalse(options(a).isEmpty());for(String body:options(a))assertTrue(CatalogSearch.matches(body,"کنار"));
             described(root,"پاک‌کردن جست‌وجو").performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals("",search(root).getText().toString());assertEquals(20,options(a).size());
         }
     }

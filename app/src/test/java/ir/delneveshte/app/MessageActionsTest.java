@@ -60,13 +60,13 @@ public class MessageActionsTest {
 
     private View root(MainActivity a){return a.getWindow().getDecorView();}
     private void menu(MainActivity a,int action) throws Exception {
-        String body=CatalogBrowsingTest.options(a).get(0);CatalogBrowsingTest.text(root(a),body).performClick();
+        String body=CatalogBrowsingTest.options(a).get(0);CatalogBrowsingTest.text(root(a),body).performClick();shadowOf(Looper.getMainLooper()).idle();
         assertTrue(org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu().getMenu().performIdentifierAction(action,0));
         shadowOf(Looper.getMainLooper()).idle();
     }
     @Test public void compactCardAddsRandomWithOneTapAndPreservesTheApprovedSnapshot() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();View action=CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی");assertNotNull(action);action.performClick();
+            MainActivity a=c.get();View action=CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی");assertNotNull(action);action.performClick();shadowOf(Looper.getMainLooper()).idle();
             assertEquals(1,store.queue().size());assertNull(ShadowAlertDialog.getLatestAlertDialog());assertEquals("RANDOM",store.queue().get(0).sendMode);
             assertFalse(CatalogBrowsingTest.described(root(a),"ارسال در زمان تصادفی").isEnabled());
             Settings changed=settings.copy();changed.recipient="+989351234567";changed.subscriptionId=8;store.saveSettings(changed);assertEquals(settings.recipient,store.queue().get(0).recipient);assertEquals(7,store.queue().get(0).subscriptionId);
@@ -76,21 +76,21 @@ public class MessageActionsTest {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();EditText input=CatalogBrowsingTest.search(editor.getWindow().getDecorView());input.setText("دلم یک چای دونفره می‌خواهد ☕💕");
             for(String label:new String[]{"ارسال همین حالا","ارسال در زمان تصادفی","ارسال در زمان دلخواه"})assertNotNull(CatalogBrowsingTest.text(editor.getWindow().getDecorView(),label));
-            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان تصادفی").performClick();assertFalse(editor.isShowing());assertEquals(1,store.queue().size());assertEquals("دلم یک چای دونفره می‌خواهد ☕💕",store.queue().get(0).body);
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان تصادفی").performClick();shadowOf(Looper.getMainLooper()).idle();assertFalse(editor.isShowing());assertEquals(1,store.queue().size());assertEquals("دلم یک چای دونفره می‌خواهد ☕💕",store.queue().get(0).body);
         }
     }
     @Test public void editingCanChooseAFixedTimeAndCancelCreatesNoQueueEntry() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             menu(c.get(),4);AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.search(editor.getWindow().getDecorView()).setText("قرار عاشقانهٔ ما 💕");
-            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();AlertDialog schedule=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());schedule.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(store.queue().isEmpty());assertTrue(editor.isShowing());
-            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();schedule=ShadowAlertDialog.getLatestAlertDialog();schedule.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog schedule=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());schedule.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(store.queue().isEmpty());assertTrue(editor.isShowing());
+            CatalogBrowsingTest.text(editor.getWindow().getDecorView(),"ارسال در زمان دلخواه").performClick();shadowOf(Looper.getMainLooper()).idle();schedule=ShadowAlertDialog.getLatestAlertDialog();schedule.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
             Message m=store.queue().get(0);assertEquals("FIXED",m.sendMode);assertTrue(m.requestedAt>System.currentTimeMillis());assertEquals("قرار عاشقانهٔ ما 💕",m.body);assertEquals(settings.recipient,m.recipient);assertFalse(editor.isShowing());
         }
     }
     @Test public void immediateCancellationCreatesNothingAndConfirmationUsesThePreviewedRecipient() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            menu(c.get(),1);AlertDialog confirmation=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(store.history().isEmpty());
-            menu(c.get(),1);confirmation=ShadowAlertDialog.getLatestAlertDialog();Settings changed=settings.copy();changed.recipient="+989351234567";store.saveSettings(changed);confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            menu(c.get(),1);AlertDialog confirmation=ShadowAlertDialog.getLatestAlertDialog();assertTrue(store.queue().isEmpty());confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(store.history().isEmpty());
+            menu(c.get(),1);confirmation=ShadowAlertDialog.getLatestAlertDialog();Settings changed=settings.copy();changed.recipient="+989351234567";store.saveSettings(changed);confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
             assertTrue(store.queue().isEmpty());assertEquals(1,store.history().size());Message m=store.history().get(0);assertEquals(settings.recipient,m.recipient);assertEquals("SENDING",m.status);assertEquals("IMMEDIATE",m.sendMode);
         }
     }

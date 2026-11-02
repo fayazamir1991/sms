@@ -1,4 +1,4 @@
 <resources>
- <color name="brand_red">#C81D25</color><color name="brand_highlight">#FF5A36</color><color name="brand_gold">#D4AF37</color><color name="gold_ink">#8D6D13</color>
- <color name="surface">#FFFFFF</color><color name="page_background">#FFFAF2</color><color name="main_text">#241915</color><color name="secondary_text">#796B62</color>
+ <color name="brand_primary">#8172B5</color><color name="brand_ink">#62528E</color><color name="brand_complement">#F4E89C</color>
+ <color name="surface">#FFFFFF</color><color name="page_background">#FBF9FD</color><color name="main_text">#292633</color><color name="secondary_text">#716B7E</color>
 </resources>

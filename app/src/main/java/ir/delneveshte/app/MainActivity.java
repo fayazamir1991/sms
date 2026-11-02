@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
     private View appHeader(){
         if(currentTab==4)return searchToolbar();
         LinearLayout bar=horizontal();bar.setBackgroundColor(BG);bar.setPadding(dp(18),0,dp(12),0);bar.setMinimumHeight(dp(64));
-        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.GOLD_INK);brand.setBackground(shape(AppThemeTokens.SOFT_GOLD,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
+        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.ic_home);brand.setColorFilter(AppThemeTokens.COMPLEMENT_INK);brand.setBackground(shape(AppThemeTokens.SOFT_COMPLEMENT,18,0));brand.setPadding(dp(7),dp(7),dp(7),dp(7));brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(36),dp(36));bp.setMarginEnd(dp(10));bar.addView(brand,bp);
         LinearLayout title=vertical();String name=currentTab==0?"دل‌نوشته":currentTab==1?"صف ارسال":currentTab==2?"سابقه":"تنظیمات";
         title.addView(label(name,21,INK,true));
         boolean active=store.settings().enabled;String status=active?"ارسال فعال":"ارسال متوقف";
@@ -307,7 +307,7 @@ public class MainActivity extends Activity {
                 if(enqueueMessage(text)){sessionEnqueued.add(text);renderCatalogResults();}
             });
             random.setEnabled(!sessionEnqueued.contains(text));actions.addView(random,new LinearLayout.LayoutParams(dp(44),dp(44)));
-            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.GOLD_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_GOLD,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
+            ImageButton fixed=compactAction("ارسال در زمان دلخواه",R.drawable.ic_clock,()->scheduleMessage(text,null));fixed.setColorFilter(AppThemeTokens.COMPLEMENT_INK);fixed.setBackground(ripple(AppThemeTokens.SOFT_COMPLEMENT,22));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(44),dp(44));fp.setMarginStart(dp(8));actions.addView(fixed,fp);c.addView(actions);target.addView(c);
         }
         if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
     }
@@ -319,7 +319,7 @@ public class MainActivity extends Activity {
         menu.getMenu().add(0,4,3,"ویرایش متن").setIcon(R.drawable.ic_edit_schedule);
         menu.getMenu().add(0,5,4,"اطلاعات منبع").setIcon(R.drawable.ic_info);
         menu.getMenu().add(0,6,5,"کپی متن").setIcon(R.drawable.ic_copy);
-        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.GOLD_INK:i==3?AppThemeTokens.ACCENT:ACCENT);}
+        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==2?AppThemeTokens.COMPLEMENT_INK:i==3?AppThemeTokens.ACCENT:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
             switch(item.getItemId()){
@@ -548,7 +548,7 @@ public class MainActivity extends Activity {
         menu.getMenu().add(0,2,1,"ارسال همین حالا").setIcon(R.drawable.ic_send);
         menu.getMenu().add(0,3,2,"حذف از صف").setIcon(R.drawable.ic_close);
         menu.getMenu().add(0,4,3,"کپی متن").setIcon(R.drawable.ic_copy);
-        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==0?AppThemeTokens.GOLD_INK:ACCENT);}
+        for(int i=0;i<menu.getMenu().size();i++){android.graphics.drawable.Drawable icon=menu.getMenu().getItem(i).getIcon();if(icon!=null)icon.mutate().setTint(i==0?AppThemeTokens.COMPLEMENT_INK:ACCENT);}
         if(Build.VERSION.SDK_INT>=29)menu.setForceShowIcon(true);
         menu.setOnMenuItemClickListener(item->{
             switch(item.getItemId()){
@@ -1000,7 +1000,7 @@ public class MainActivity extends Activity {
 
     private TextView fieldTitle(String title) {
         TextView view = label(title, 13, MUTED, true);
-        view.setTextColor(ACCENT);view.setPadding(0,dp(16),0,dp(6));
+        view.setTextColor(AppThemeTokens.ACCENT_INK);view.setPadding(0,dp(16),0,dp(6));
         return view;
     }
 
@@ -1043,7 +1043,7 @@ public class MainActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(text == null ? "" : text);
         view.setTextSize(size);
-        view.setTextColor(color);
+        view.setTextColor(color==ACCENT?AppThemeTokens.ACCENT_INK:color);
         view.setTypeface(bold?mediumFont:regularFont);
         view.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG_RTL);
         view.setGravity(Gravity.RIGHT);
@@ -1064,7 +1064,7 @@ public class MainActivity extends Activity {
         view.setTextSize(14);
         view.setAllCaps(false);
         view.setTypeface(mediumFont);
-        view.setTextColor(primary ? Color.WHITE : ACCENT);
+        view.setTextColor(primary ? Color.WHITE : AppThemeTokens.ACCENT_INK);
         view.setMinHeight(dp(50));
         view.setMinimumHeight(dp(50));
         view.setPadding(dp(12), dp(10), dp(12), dp(10));
@@ -1149,8 +1149,8 @@ public class MainActivity extends Activity {
     }
 
     private RippleDrawable ripple(int color, int radius) {
-        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24,200,29,37)),
-                color==ACCENT?BrandSurfaces.lacquer(dp(radius),dp(1)):shape(color,radius,0),shape(Color.WHITE,radius,0));
+        return new RippleDrawable(ColorStateList.valueOf(Color.argb(24,129,114,181)),
+                shape(color==ACCENT?AppThemeTokens.ACTION_FILL:color,radius,0),shape(Color.WHITE,radius,0));
     }
 
     private LinearLayout.LayoutParams match() { return new LinearLayout.LayoutParams(-1, -2); }

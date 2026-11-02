@@ -1,22 +1,22 @@
 package ir.delneveshte.app;
 
-/** Owner-selected palette 1: lacquer red, warm ivory and restrained gold. */
+/** Owner-selected pastel palette 2: light violet and primrose yellow. */
 public final class AppThemeTokens {
     private AppThemeTokens() { }
-    public static final int BACKGROUND=0xfffffaf2;
+    public static final int BACKGROUND=0xfffbf9fd;
     public static final int SURFACE=0xffffffff;
-    public static final int TEXT=0xff241915;
-    public static final int SECONDARY=0xff796b62;
-    public static final int DIVIDER=0xffe9dfc9;
-    public static final int ACCENT=0xffc81d25;
-    public static final int ACCENT_HIGHLIGHT=0xffff5a36;
-    public static final int ACCENT_DEEP=0xffa71320;
+    public static final int TEXT=0xff292633;
+    public static final int SECONDARY=0xff716b7e;
+    public static final int DIVIDER=0xffe7e1ef;
+    public static final int ACCENT=0xff8172b5;
+    public static final int ACCENT_INK=0xff62528e;
+    public static final int ACTION_FILL=0xff7564a8;
     public static final int ACTION_BAR=BACKGROUND;
     public static final int STATUS_BAR=BACKGROUND;
-    public static final int SOFT_ACCENT=0xfffff0dc;
-    public static final int GOLD=0xffd4af37;
-    public static final int GOLD_INK=0xff8d6d13;
-    public static final int SOFT_GOLD=0xfffbf4dc;
+    public static final int SOFT_ACCENT=0xffeee9f8;
+    public static final int COMPLEMENT=0xfff4e89c;
+    public static final int COMPLEMENT_INK=ACCENT_INK;
+    public static final int SOFT_COMPLEMENT=COMPLEMENT;
     public static final int SUCCESS=0xff2c805a;
     public static final int OUTGOING=SOFT_ACCENT;
 }

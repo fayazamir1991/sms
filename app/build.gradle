@@ -4,7 +4,7 @@ android {
  compileSdk 35
  buildToolsVersion '35.0.0'
  defaultConfig {
-  applicationId 'ir.delneveshte.app'; minSdk 26; targetSdk 34; versionCode 20; versionName '0.17.0'
+  applicationId 'ir.delneveshte.app'; minSdk 26; targetSdk 34; versionCode 21; versionName '0.18.0'
   def endpoint = System.getenv('API_BASE_URL') ?: (file('api-base-url.txt').exists() ? file('api-base-url.txt').text.trim() : '')
   buildConfigField 'String', 'API_BASE_URL', groovy.json.JsonOutput.toJson(endpoint)
  }

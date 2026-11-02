@@ -14,8 +14,11 @@ public final class CatalogClient {
         config.registrationSucceeded(generation);
     }
     public JSONObject browse(String category,String query,String cursor) throws Exception {
+        return browse(category,query,cursor,"colloquial");
+    }
+    public JSONObject browse(String category,String query,String cursor,String tone) throws Exception {
         if(!config.registered())register();
-        String path="/api/v1/messages/browse?category="+URLEncoder.encode(category,"UTF-8")+"&q="+URLEncoder.encode(query,"UTF-8");
+        String path="/api/v1/messages/browse?category="+URLEncoder.encode(category,"UTF-8")+"&q="+URLEncoder.encode(query,"UTF-8")+"&tone="+("formal".equals(tone)?"formal":"colloquial");
         if(cursor!=null)path+="&cursor="+URLEncoder.encode(cursor,"UTF-8");
         try{return api.request(path,null);}catch(CloudApi.Failure failure){
             if(failure.status!=401)throw failure;

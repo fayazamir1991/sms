@@ -1,0 +1,31 @@
+{
+  "version": "original-tones-v1",
+  "messages": 2000,
+  "variants": 4000,
+  "themes": [
+    "صبح مشترک",
+    "خانه",
+    "دلتنگی",
+    "توجه",
+    "شنیدن",
+    "آشتی",
+    "دیدار",
+    "بوسه",
+    "آغوش",
+    "نزدیکی",
+    "باران",
+    "قدم‌زدن",
+    "هدیه",
+    "خاطره",
+    "فردا",
+    "همراهی",
+    "شب",
+    "شوق",
+    "آرامش",
+    "زندگی دونفره"
+  ],
+  "scene_count": 100,
+  "ending_count": 20,
+  "method": "100 authored paired scenes × 20 authored paired reflections; finite deterministic compositions, not 2000 independent stories or runtime AI",
+  "sha256": "7a64b54198eca3c65f348a4db44d73d50557b592518ff9a0e79b37cb9955a258"
+}

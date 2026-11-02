@@ -57,6 +57,20 @@ public class CatalogBrowsingTest {
     static boolean refreshing(MainActivity a) throws Exception {Field f=MainActivity.class.getDeclaredField("refreshingSuggestions");f.setAccessible(true);return f.getBoolean(a);}
     static void typed(View root,String q){search(root).setText(q);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));}
 
+    @Test public void changingToneDiscardsLateResponsesAndSearchUsesOnlySelectedVariant() throws Exception {
+        JSONObject pair=row("قدیمی").put("category","صمیمی").put("body_formal","نقره‌رو، آغوش تو را می‌خواهم 🤍").put("body_colloquial","نقره‌رو، بغل تو رو می‌خوام 🤍");
+        store.rememberCatalog(new JSONArray().put(pair));
+        try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
+            MainActivity a=c.get();View root=a.getWindow().getDecorView();Pending old=next();assertTrue(options(a).contains(pair.getString("body_colloquial")));
+            text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();text(root,"محاوره‌ای").performClick();
+            android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getListView().performItemClick(null,1,1);shadowOf(Looper.getMainLooper()).idle();
+            assertEquals("formal",store.settings().tone);root=a.getWindow().getDecorView();text(root,"پیشنهادها").performClick();Pending current=next();assertTrue(current.path.contains("tone=formal"));
+            current.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));await(()->!refreshing(a));
+            old.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));Thread.sleep(30);shadowOf(Looper.getMainLooper()).idle();
+            assertEquals(java.util.Collections.singletonList(pair.getString("body_formal")),options(a));
+            root=a.getWindow().getDecorView();text(root,"جست‌وجو").performClick();typed(root,"نقره‌رو");Pending search=next();assertTrue(search.path.contains("tone=formal"));assertTrue(options(a).contains(pair.getString("body_formal")));assertFalse(options(a).contains(pair.getString("body_colloquial")));
+        }
+    }
     @Test public void homeIsCompactAndOfflineLiveSearchHasClearWithoutASubmitButton() throws Exception {
         transport=(path,body)->{throw new CloudApi.Failure(0,"offline");};
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){

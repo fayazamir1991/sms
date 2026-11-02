@@ -47,7 +47,8 @@
   </main>
  </div>
  <dialog id="editor"><form id="editor-form"><div class="dialog-heading"><h2 id="editor-title">پیام جدید</h2><button id="close-editor" class="quiet" type="button" aria-label="بستن">×</button></div>
-  <input id="message-id" type="hidden"><label for="message-body">متن پیام</label><textarea id="message-body" rows="6" maxlength="2400" required></textarea>
+  <input id="message-id" type="hidden"><label for="message-body" id="formal-label">متن رسمی</label><textarea id="message-body" rows="6" maxlength="2400" required></textarea>
+  <div id="spoken-field"><label for="message-spoken">متن محاوره‌ای</label><textarea id="message-spoken" rows="6" maxlength="2400" required></textarea></div>
   <label for="message-category">دسته‌بندی</label><select id="message-category"><option>کوتاه</option><option>صمیمی</option><option>قدردانی</option><option>دلتنگی</option><option>شعر</option></select>
   <label class="checkbox"><input id="message-active" type="checkbox" checked>در پیشنهادها نمایش داده شود</label>
   <p id="editor-error" class="error" role="alert"></p><button class="primary" type="submit">ذخیرهٔ پیام</button>

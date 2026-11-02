@@ -110,6 +110,7 @@ public class MainActivity extends Activity {
             catalogSearchDraft=savedInstanceState.getString("catalog_search_draft",catalogQuery);
             category = savedInstanceState.getString("category", category);
             draft.recipient = savedInstanceState.getString("draft_recipient", draft.recipient);
+            draft.tone = savedInstanceState.getString("draft_tone", draft.tone);
             draft.dailyCount = savedInstanceState.getInt("draft_count", draft.dailyCount);
             draft.startMinute = savedInstanceState.getInt("draft_start", draft.startMinute);
             draft.endMinute = savedInstanceState.getInt("draft_end", draft.endMinute);
@@ -167,6 +168,7 @@ public class MainActivity extends Activity {
         state.putInt("tab", currentTab);
         state.putString("category", category);
         state.putString("draft_recipient", draft.recipient);
+        state.putString("draft_tone", draft.tone);
         state.putInt("draft_count", draft.dailyCount);
         state.putInt("draft_start", draft.startMinute);
         state.putInt("draft_end", draft.endMinute);
@@ -361,19 +363,20 @@ public class MainActivity extends Activity {
             if(!reset)appendLocalPage();
             refreshingSuggestions=false;usingOfflineCatalog=true;renderCatalogResults();return;
         }
-        final int generation=browseGeneration,cloudGeneration=cloud.generation();final String query=activeQuery(),chosenCategory=activeCategory(),cursor=catalogCursor;
+        final int generation=browseGeneration,cloudGeneration=cloud.generation();final String query=activeQuery(),chosenCategory=activeCategory(),cursor=catalogCursor,tone=store.settings().tone;
         refreshingSuggestions=true;renderCatalogResults();
         new Thread(()->{
             org.json.JSONObject response=null;String failure=null;
             try{
-                response=new CatalogClient(catalogTransport(cloud),cloud).browse(chosenCategory,query,cursor);
+                response=new CatalogClient(catalogTransport(cloud),cloud).browse(chosenCategory,query,cursor,tone);
+                response.put("messages",ToneCatalog.select(response.getJSONArray("messages"),tone));
                 org.json.JSONArray rows=response.getJSONArray("messages");if(rows.length()>20)throw new IllegalStateException();
                 for(int i=0;i<rows.length();i++){org.json.JSONObject row=rows.getJSONObject(i);if(row.getString("body").length()>1200||(!"همه".equals(chosenCategory)&&!chosenCategory.equals(row.getString("category"))))throw new IllegalStateException();}
                 if(generation==browseGeneration&&cloudGeneration==cloud.generation()&&cloud.enabled())store.rememberCatalog(rows);
             }catch(Exception error){failure=error instanceof CloudApi.Failure?error.getMessage():"دریافت پیام‌ها کامل نشد؛ اتصال به سرور را بررسی کن.";}
             final org.json.JSONObject data=response;final String error=failure;
             handler.post(()->{
-                if(generation!=browseGeneration||cloudGeneration!=cloud.generation()||!cloud.enabled()||isFinishing()||isDestroyed())return;
+                if(generation!=browseGeneration||!tone.equals(store.settings().tone)||cloudGeneration!=cloud.generation()||!cloud.enabled()||isFinishing()||isDestroyed())return;
                 refreshingSuggestions=false;
                 if(error==null&&data!=null){
                     usingOfflineCatalog=false;
@@ -412,15 +415,15 @@ public class MainActivity extends Activity {
     }
     private java.util.List<String> offlinePool(){
         java.util.List<String> result=new ArrayList<>();
-        for(String raw:TextBank.allSuggestions(activeCategory(),catalogNickname())){
+        for(String raw:ToneCatalog.offline(this,activeCategory(),catalogNickname(),store.settings().tone)){
             String rendered=CatalogText.render(raw,catalogNickname());
             if(rendered!=null&&CatalogSearch.matches(rendered,activeQuery()))result.add(raw);
         }
         return result;
     }
     private void appendLocalPage(){
-        java.util.List<String> rows=store.localCatalogPage(activeCategory(),activeQuery(),localCatalogOffset,catalogNickname());
-        if(store.localCatalogPage(activeCategory(),activeQuery(),0,catalogNickname()).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
+        java.util.List<String> rows=store.localCatalogPage(activeCategory(),activeQuery(),localCatalogOffset,catalogNickname(),store.settings().tone);
+        if(store.localCatalogPage(activeCategory(),activeQuery(),0,catalogNickname(),store.settings().tone).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
         catalogHasMore=rows.size()>20;
         for(int i=0;i<Math.min(20,rows.size());i++)appendOption(rows.get(i));localCatalogOffset+=20;
     }
@@ -428,7 +431,7 @@ public class MainActivity extends Activity {
         options.clear();credits.clear();localCatalogOffset=0;searchPending.clear();searchKnown.clear();searchRemoteMore=false;
         if(emptySearch()){catalogHasMore=false;catalogCursor=null;refreshingSuggestions=false;return;}
         if(liveQuery()){
-            for(int offset=0;;offset+=20){List<String> rows=store.localCatalogPage("همه",catalogQuery,offset,catalogNickname());for(int i=0;i<Math.min(20,rows.size());i++)bufferSearch(rows.get(i));if(rows.size()<=20)break;}
+            for(int offset=0;;offset+=20){List<String> rows=store.localCatalogPage("همه",catalogQuery,offset,catalogNickname(),store.settings().tone);for(int i=0;i<Math.min(20,rows.size());i++)bufferSearch(rows.get(i));if(rows.size()<=20)break;}
             for(String raw:offlinePool())bufferSearch(raw);drainSearch(20);
         }else appendLocalPage();
     }
@@ -686,6 +689,17 @@ public class MainActivity extends Activity {
 
     private void settingsPage() {
         heading("تنظیمات ارسال", "تعداد و بازهٔ زمانی، به انتخاب تو");
+        LinearLayout toneCard=card(Color.WHITE);
+        toneCard.addView(label("لحن پیام‌ها",15,ACCENT,true));
+        toneCard.addView(actionButton("formal".equals(store.settings().tone)?"رسمی":"محاوره‌ای",R.drawable.ic_edit_schedule,false,()->{
+            String[] labels={"محاوره‌ای","رسمی"};String[] values={"colloquial","formal"};
+            new AlertDialog.Builder(this).setTitle("لحن پیام‌ها").setSingleChoiceItems(labels,"formal".equals(store.settings().tone)?1:0,(dialog,which)->{
+                store.saveTone(values[which]);draft.tone=values[which];
+                handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;
+                renewOptions();dialog.dismiss();renderKeepingScroll();
+            }).setNegativeButton("بستن",null).show();
+        }));
+        toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);
         LinearLayout destination = card(Color.WHITE);
         destination.addView(label("مقصد پیامک",15,ACCENT,true));
         destination.addView(fieldTitle("شمارهٔ همسرت"));
@@ -850,7 +864,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean sameSettings(ir.delneveshte.app.Settings a, ir.delneveshte.app.Settings b) {
-        return a.recipient.equals(b.recipient) && a.nickname.equals(b.nickname)
+        return a.recipient.equals(b.recipient) && a.nickname.equals(b.nickname) && a.tone.equals(b.tone)
                 && a.dailyCount == b.dailyCount && a.startMinute == b.startMinute
                 && a.endMinute == b.endMinute && a.subscriptionId == b.subscriptionId;
     }

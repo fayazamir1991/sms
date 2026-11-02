@@ -1,3 +1,4 @@
+import {validTone,toneColumn,tonePair} from './catalog-tones.mjs';
 import {reportData} from './admin-reports.mjs';
 import {browseCatalog} from './catalog-browse.mjs';
 import {normalizeSearch} from './catalog-search.mjs';
@@ -45,8 +46,9 @@ async function register(request,env){
 }
 async function suggestions(request,env){
  const installation=await authenticate(request,env),url=new URL(request.url),category=url.searchParams.get('category')||'همه';
+ const tone=url.searchParams.get('tone')||'colloquial';requireValue(validTone(tone));
  const limit=Number(url.searchParams.get('limit')||'20');requireValue(number(limit,1,50));requireValue(category==='همه'||CATEGORIES.has(category));
- const sql=`SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id LEFT JOIN catalog_offers h ON h.catalog_id=c.id AND h.installation_id=? WHERE c.active=1`;
+ const sql=`SELECT c.id,${toneColumn(tone)} AS body,c.body_formal,c.body_colloquial,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.original_text,o.original_language,o.translation_provider,o.license_url FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id LEFT JOIN catalog_offers h ON h.catalog_id=c.id AND h.installation_id=? WHERE c.active=1`;
  const base=sql;
  const args=[installation.id];if(category!=='همه')args.push(category);args.push(Date.now()-24*60*60*1000,limit);
  const {results}=await env.DB.prepare(base+(category==='همه'?'':' AND c.category=?')+' ORDER BY (h.served_at IS NULL) DESC,(c.created_at>?) DESC,h.served_at ASC,RANDOM() LIMIT ?').bind(...args).all();
@@ -140,12 +142,14 @@ async function adminApi(request,env,path){
   const b=await readJson(request);requireValue(typeof b.body==='string'&&b.body.trim().length>0&&b.body.length<=2400&&CATEGORIES.has(b.category));
   requireValue(b.id==null||UUID.test(b.id));requireValue(b.active==null||typeof b.active==='boolean');
   requireValue(!/https?:|www\.|[a-z0-9-]+\.(com|ir|net|org)\b/i.test(b.body)&&!/[a-z]{3,}/i.test(b.body),'متن پیام باید فارسی و بدون لینک باشد.');
+  const pair=tonePair(b.body,b.category);
+  for(const key of ['body_formal','body_colloquial'])if(b.category!=='شعر'&&b[key]!=null){requireValue(typeof b[key]==='string'&&b[key].trim().length>0&&b[key].length<=2400&&!/[a-z]{3,}|https?:|www\./i.test(b[key]),'هر دو لحن باید فارسی و بدون لینک باشند.');pair[key]=b[key].trim();}
   const id=b.id||crypto.randomUUID(),fp=await sha256(normalizeBody(b.body));
   const existing=await env.DB.prepare('SELECT id FROM catalog_messages WHERE fingerprint=?').bind(fp).first();
   if(existing&&existing.id!==id)throw new HttpError(409,'این متن قبلاً در بانک پیام‌ها ثبت شده است.');
-  await env.DB.prepare(`INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,?,?,?)
-   ON CONFLICT(id) DO UPDATE SET body=excluded.body,fingerprint=excluded.fingerprint,category=excluded.category,active=excluded.active,search_text=excluded.search_text`)
-   .bind(id,b.body.trim(),fp,b.category,b.active===false?0:1,Date.now(),normalizeSearch(b.body)).run();return json({id});
+  await env.DB.prepare(`INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text,body_formal,body_colloquial) VALUES(?,?,?,?,?,?,?,?,?)
+   ON CONFLICT(id) DO UPDATE SET body=excluded.body,fingerprint=excluded.fingerprint,category=excluded.category,active=excluded.active,search_text=excluded.search_text,body_formal=excluded.body_formal,body_colloquial=excluded.body_colloquial`)
+   .bind(id,b.body.trim(),fp,b.category,b.active===false?0:1,Date.now(),normalizeSearch(b.body),pair.body_formal,pair.body_colloquial).run();return json({id});
  }
  if(path.startsWith('/api/admin/tables/')&&request.method==='GET'){
   const table=path.split('/').pop(),url=new URL(request.url),page=Number(url.searchParams.get('page')||1);
@@ -153,7 +157,7 @@ async function adminApi(request,env,path){
   const queries={
    webpages:'SELECT source,url,fetched_at,done FROM catalog_web_pages ORDER BY fetched_at,url',
    imports:'SELECT job,run_key,status,started_at,finished_at,added,detail FROM catalog_jobs ORDER BY started_at DESC',
-   catalog:'SELECT c.id,c.body,c.category,c.active,c.created_at,o.source,o.source_url,o.author,o.language,o.rights FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id ORDER BY c.created_at DESC,c.id',
+   catalog:'SELECT c.id,c.body,c.body_formal,c.body_colloquial,c.category,c.active,c.created_at,o.source,o.source_url,o.author,o.language,o.rights FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id ORDER BY c.created_at DESC,c.id',
    installations:'SELECT id,device_hash,app_version,enabled,created_at,last_seen_at FROM installations ORDER BY created_at DESC,id',
    queue:'SELECT installation_id,id,body_cipher,recipient_cipher,status,sim_id,revision,approved_at,planned_at,submitted_at,updated_at FROM queued_messages ORDER BY updated_at DESC,id',
    events:'SELECT installation_id,id,message_id,status,revision,occurred_at FROM message_events ORDER BY occurred_at DESC,id',

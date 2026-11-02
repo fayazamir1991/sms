@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {handle} from './worker.mjs';
 import {SQLiteStore} from './sqlite.mjs';
 import {startCatalogJobs} from './catalog-jobs.mjs';
+import {ensureToneCatalog} from './tone-catalog-seed.mjs';
 import {importBundledGanjoor} from './catalog-import.mjs';
 
 export function settings(input=process.env){
@@ -33,7 +34,7 @@ function assets(){
 }
 export async function startServer(input=process.env){
  const config=settings(input),db=new SQLiteStore(config.database);
- try{db.migrate();await importBundledGanjoor(db);}catch(error){db.close();throw error;}
+ try{db.migrate();await importBundledGanjoor(db);await ensureToneCatalog(db);}catch(error){db.close();throw error;}
  const env={...config,DB:db,ASSETS:assets()};
  const server=createServer({maxHeaderSize:16384},async(incoming,outgoing)=>{
   try{

@@ -20,7 +20,7 @@ export class SQLiteStore {
  migrate(){
   this.sqlite.exec('CREATE TABLE IF NOT EXISTS app_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)');
   const rebuilding=!this.sqlite.prepare("SELECT 1 FROM app_migrations WHERE name='0008_full_rebuild.sql'").get();
-  for(const name of ['0001_schema.sql','0002_initial_catalog.sql','0003_catalog_imports.sql','0004_web_frontier.sql','0005_source_metadata.sql','0006_clean_catalog.sql','0007_catalog_offers.sql','0008_full_rebuild.sql','0009_catalog_search.sql','0010_reports.sql']){
+  for(const name of ['0001_schema.sql','0002_initial_catalog.sql','0003_catalog_imports.sql','0004_web_frontier.sql','0005_source_metadata.sql','0006_clean_catalog.sql','0007_catalog_offers.sql','0008_full_rebuild.sql','0009_catalog_search.sql','0010_reports.sql','0011_catalog_tones.sql']){
    this.sqlite.exec('BEGIN IMMEDIATE');
    try{
     if(!this.sqlite.prepare('SELECT 1 FROM app_migrations WHERE name=?').get(name)){

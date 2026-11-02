@@ -26,15 +26,15 @@ public final class AppStore {
         prefs = app.getSharedPreferences("settings", 0);
     }
     private static class Helper extends SQLiteOpenHelper {
-        Helper(Context c) { super(c, "messages.db", null, 3); }
+        Helper(Context c) { super(c, "messages.db", null, 4); }
         @Override public void onConfigure(SQLiteDatabase d) { d.setForeignKeyConstraintsEnabled(true); }
         @Override public void onCreate(SQLiteDatabase d) {
             d.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT,body TEXT NOT NULL,recipient TEXT NOT NULL,simLabel TEXT,subscriptionId INTEGER,approvedAt INTEGER,plannedAt INTEGER DEFAULT 0,submittedAt INTEGER DEFAULT 0,status TEXT,detail TEXT DEFAULT '',planDay TEXT DEFAULT '',partCount INTEGER DEFAULT 0,sync_id TEXT,revision INTEGER NOT NULL DEFAULT 1,synced_revision INTEGER NOT NULL DEFAULT 0,sendMode TEXT NOT NULL DEFAULT 'RANDOM',requestedAt INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE parts(messageId INTEGER,part INTEGER,success INTEGER,PRIMARY KEY(messageId,part))");
-            syncTables(d);
+            syncTables(d);toneColumns(d);
         }
         @Override public void onUpgrade(SQLiteDatabase d,int oldVersion,int newVersion) {
-            if(oldVersion<1||newVersion!=3)throw new IllegalStateException("Unsupported schema; preserving existing data");
+            if(oldVersion<1||newVersion!=4)throw new IllegalStateException("Unsupported schema; preserving existing data");
             if(oldVersion<2){
             d.execSQL("ALTER TABLE messages ADD COLUMN sync_id TEXT");
             d.execSQL("ALTER TABLE messages ADD COLUMN revision INTEGER NOT NULL DEFAULT 1");
@@ -53,6 +53,11 @@ public final class AppStore {
                 d.execSQL("ALTER TABLE messages ADD COLUMN requestedAt INTEGER NOT NULL DEFAULT 0");
                 d.execSQL("UPDATE messages SET sendMode='IMMEDIATE' WHERE status='IMMEDIATE'");
             }
+            if(oldVersion<4){toneColumns(d);d.delete("catalog_cache",null,null);d.delete("catalog_cache_state",null,null);}
+        }
+        private void toneColumns(SQLiteDatabase d) {
+            d.execSQL("ALTER TABLE catalog_cache ADD COLUMN body_formal TEXT");
+            d.execSQL("ALTER TABLE catalog_cache ADD COLUMN body_colloquial TEXT");
         }
         private void syncTables(SQLiteDatabase d) {
             d.execSQL("CREATE UNIQUE INDEX messages_sync_id ON messages(sync_id)");
@@ -66,12 +71,22 @@ public final class AppStore {
     public Settings settings() {
         Settings s=new Settings();s.recipient=prefs.getString("recipient","");s.nickname=prefs.getString("nickname","عزیزم");
         s.dailyCount=prefs.getInt("count",2);s.startMinute=prefs.getInt("start",540);s.endMinute=prefs.getInt("end",1260);
+        s.tone=prefs.getString("tone","colloquial");if(!"formal".equals(s.tone))s.tone="colloquial";
         s.subscriptionId=prefs.getInt("sim",-1);s.enabled=prefs.getBoolean("enabled",false);return s;
     }
     public void saveSettings(Settings s) {
         if(!prefs.edit().putString("recipient",s.recipient).putString("nickname",s.nickname).putInt("count",s.dailyCount)
                 .putInt("start",s.startMinute).putInt("end",s.endMinute).putInt("sim",s.subscriptionId)
-                .putBoolean("enabled",s.enabled).commit()) throw new IllegalStateException("ذخیره تنظیمات ناموفق بود");
+                .putString("tone",s.tone).putBoolean("enabled",s.enabled).commit()) throw new IllegalStateException("ذخیره تنظیمات ناموفق بود");
+    }
+    public void saveTone(String tone) {
+        if(!prefs.edit().putString("tone","formal".equals(tone)?"formal":"colloquial").commit())throw new IllegalStateException("ذخیرهٔ لحن انجام نشد");
+    }
+    private void cacheTone(ContentValues values,JSONObject row) {
+        for(String key:new String[]{"body_formal","body_colloquial"})values.put(key,row.isNull(key)?null:row.optString(key,null));
+        android.content.SharedPreferences.Editor editor=app.getSharedPreferences("catalog_metadata",0).edit();
+        for(String key:new String[]{"body","body_formal","body_colloquial"})if(!row.isNull(key))editor.putString(row.optString(key),row.toString());
+        editor.apply();
     }
     private static ContentValues values(String state,String detail) {
         ContentValues v=new ContentValues();v.put("status",state);v.put("detail",detail);return v;
@@ -288,7 +303,7 @@ public final class AppStore {
                     JSONObject row=rows.getJSONObject(i);ContentValues v=new ContentValues();
                     app.getSharedPreferences("catalog_metadata",0).edit().putString(row.getString("body"),row.toString()).apply();
                     v.put("id",row.getString("id"));v.put("body",row.getString("body"));v.put("category",category);
-                    db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+                    cacheTone(v,row);db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
                 }
                 ContentValues state=new ContentValues();state.put("category",category);state.put("updated_at",System.currentTimeMillis());
                 db.insertWithOnConflict("catalog_cache_state",null,state,SQLiteDatabase.CONFLICT_REPLACE);
@@ -311,18 +326,20 @@ public final class AppStore {
     public void rememberCatalog(JSONArray rows) throws JSONException {
         synchronized(LOCK){db.beginTransaction();try{
             for(int i=0;i<rows.length();i++){
-                JSONObject row=rows.getJSONObject(i);ContentValues v=new ContentValues();v.put("id",row.getString("id"));v.put("body",row.getString("body"));v.put("category",row.getString("category"));db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+                JSONObject row=rows.getJSONObject(i);ContentValues v=new ContentValues();v.put("id",row.getString("id"));v.put("body",row.getString("body"));v.put("category",row.getString("category"));cacheTone(v,row);db.insertWithOnConflict("catalog_cache",null,v,SQLiteDatabase.CONFLICT_REPLACE);
                 app.getSharedPreferences("catalog_metadata",0).edit().putString(row.getString("body"),row.toString()).apply();
             }db.setTransactionSuccessful();
         }finally{db.endTransaction();}}
     }
     public List<String> localCatalogPage(String category,String query,int offset){return localCatalogPage(category,query,offset,"عزیزم");}
-    public List<String> localCatalogPage(String category,String query,int offset,String nickname){
+    public List<String> localCatalogPage(String category,String query,int offset,String nickname){return localCatalogPage(category,query,offset,nickname,null);}
+    public List<String> localCatalogPage(String category,String query,int offset,String nickname,String tone){
         synchronized(LOCK){List<String> out=new ArrayList<>();List<String> args=new ArrayList<>();
             String where="1=1";
             if(!"همه".equals(category)){where+=" AND category=?";args.add(category);}
             String key=CatalogSearch.key(query);int skipped=0;
-            try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache WHERE "+where+" ORDER BY id",args.toArray(new String[0]))){
+            String selected=tone==null?"body":"CASE WHEN category='شعر' THEN body ELSE "+("formal".equals(tone)?"body_formal":"body_colloquial")+" END";
+            try(Cursor c=db.rawQuery("SELECT "+selected+" FROM catalog_cache WHERE "+where+" ORDER BY id",args.toArray(new String[0]))){
                 while(c.moveToNext()){
                     String rendered=CatalogText.render(c.getString(0),nickname);
                     if(rendered==null||!CatalogSearch.key(rendered).contains(key))continue;
@@ -339,7 +356,11 @@ public final class AppStore {
             String author=row.isNull("author")?"":row.optString("author","");
             String url=row.isNull("source_url")?"":row.optString("source_url","");
             String rights=row.isNull("rights")?"":row.optString("rights","");
-            return "منبع: "+source+(author.isEmpty()?"":"\nپدیدآورنده: "+author)+(url.isEmpty()?"":"\n"+url)+(rights.isEmpty()?"":"\n"+rights);
+            String inspirations="";
+            JSONArray refs=new JSONArray(row.optString("inspiration_refs","[]"));
+            if(refs.length()>0){inspirations="\n\nمطالعهٔ زمینه‌ای؛ متن پیام نگارش مستقل است و نقل‌قول نیست:";
+                for(int i=0;i<refs.length();i++){JSONObject ref=refs.getJSONObject(i);inspirations+="\n"+ref.optString("title")+" — "+ref.optString("author")+"\n"+ref.optString("url");}}
+            return "منبع: "+source+(author.isEmpty()?"":"\nپدیدآورنده: "+author)+(url.isEmpty()?"":"\n"+url)+(rights.isEmpty()?"":"\n"+rights)+inspirations;
         }catch(Exception error){return "بانک دل‌نوشته";}
     }
     public List<String> cachedSuggestions(String category,String nickname) {

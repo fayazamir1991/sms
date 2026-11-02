@@ -103,7 +103,10 @@ root=wait_ui(lambda root: any(n.get('text')=='پیامی پیدا نشد.' for n
 assert not cards(root)
 tap_node(root,description='پاک‌کردن جست‌وجو')
 root=ui();assert not cards(root);assert not any(n.get('text')=='پیامی پیدا نشد.' for n in root.iter('node'))
-assert any(n.get('class')=='android.widget.EditText' and n.get('text')=='' and n.get('focused')=='true' for n in root.iter('node'))
+inputs=[n for n in root.iter('node') if n.get('class')=='android.widget.EditText']
+assert len(inputs)==1 and inputs[0].get('focused')=='true', [n.attrib for n in inputs]
+# Accessibility may expose the hint as EditText.text when the actual value is empty.
+assert any(n.get('content-desc')=='پاک‌کردن جست‌وجو' and n.get('enabled')=='false' for n in root.iter('node')), 'Clear must be disabled for the genuinely empty input'
 print('PASS: search opens empty with focus/keyboard; typing searches live and clear removes results.')
 
 if ime_shown(): adb('shell','input','keyevent','4')

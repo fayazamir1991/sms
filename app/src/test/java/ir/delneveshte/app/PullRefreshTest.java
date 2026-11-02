@@ -20,8 +20,15 @@ public class PullRefreshTest {
     private final Context context=RuntimeEnvironment.getApplication();
     private final int[] calls={0};
     private PullRefreshLayout layout;
-    private ScrollView scroll;
-    private void create(){scroll=new ScrollView(context);TextView child=new TextView(context);child.setText("بانک پیام");scroll.addView(child,new ScrollView.LayoutParams(400,3000));layout=new PullRefreshLayout(context,scroll);layout.setOnRefreshListener(()->calls[0]++);layout.measure(View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));layout.layout(0,0,400,600);}
+    // The platform scrolling capability is supplied explicitly; test our gesture handling,
+    // rather than relying on an unattached Robolectric ScrollView's scroll-range calculation.
+    private static final class TestScroll extends ScrollView {
+        boolean scrolled;
+        TestScroll(Context context){super(context);}
+        @Override public boolean canScrollVertically(int direction){return direction<0&&scrolled;}
+    }
+    private TestScroll scroll;
+    private void create(){scroll=new TestScroll(context);TextView child=new TextView(context);child.setText("بانک پیام");scroll.addView(child,new ScrollView.LayoutParams(400,3000));layout=new PullRefreshLayout(context,scroll);layout.setOnRefreshListener(()->calls[0]++);layout.measure(View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));layout.layout(0,0,400,600);}
     private float px(float dp){return dp*context.getResources().getDisplayMetrics().density;}
     private boolean event(int type,float x,float y){long now=SystemClock.uptimeMillis();MotionEvent event=MotionEvent.obtain(now,now,type,px(x),px(y),0);boolean handled=layout.dispatchTouchEvent(event);event.recycle();return handled;}
     @Test public void onlyACompleteDownwardReleaseAtTopRefreshesAndRepeatedDragsDoNotDuplicate(){
@@ -33,7 +40,7 @@ public class PullRefreshTest {
         create();event(MotionEvent.ACTION_DOWN,40,20);event(MotionEvent.ACTION_MOVE,40,50);event(MotionEvent.ACTION_UP,40,50);assertEquals(0,calls[0]);
         event(MotionEvent.ACTION_DOWN,40,20);event(MotionEvent.ACTION_MOVE,160,45);event(MotionEvent.ACTION_UP,160,45);assertEquals(0,calls[0]);
         event(MotionEvent.ACTION_DOWN,40,160);event(MotionEvent.ACTION_MOVE,40,30);event(MotionEvent.ACTION_UP,40,30);assertEquals(0,calls[0]);
-        scroll.scrollTo(0,200);assertTrue(scroll.canScrollVertically(-1));event(MotionEvent.ACTION_DOWN,40,20);event(MotionEvent.ACTION_MOVE,40,140);event(MotionEvent.ACTION_UP,40,140);assertEquals(0,calls[0]);
+        scroll.scrolled=true;assertTrue(scroll.canScrollVertically(-1));event(MotionEvent.ACTION_DOWN,40,20);event(MotionEvent.ACTION_MOVE,40,140);event(MotionEvent.ACTION_UP,40,140);assertEquals(0,calls[0]);
     }
     @Test public void accessibilityCanRefreshWithoutAGesture(){create();assertTrue(layout.performAccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK,null));assertEquals(1,calls[0]);}
 }

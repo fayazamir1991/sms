@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     private ir.delneveshte.app.Settings draft;
     private LinearLayout page;
     private ScrollView pageScroll;
+    private PullRefreshLayout bankRefresh;
     private EditText searchInput;
     private boolean searchKeyboardRequested;
     private int searchKeyboardAttempts;
@@ -132,12 +133,6 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         store.recoverUncertain(System.currentTimeMillis());
-        if (store.settings().enabled
-                && (!SmsRuntime.hasSendPermission(this) || !SmsRuntime.hasSimPermission(this))) {
-            SmsRuntime.pause(this);
-            store.requeueFuture();
-            draft.enabled = false;
-        }
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
@@ -185,7 +180,7 @@ public class MainActivity extends Activity {
     }
 
     private void render() {
-        catalogResults=null;searchInput=null;
+        catalogResults=null;searchInput=null;bankRefresh=null;
         LinearLayout root = vertical();
         root.setBackgroundColor(BG);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -200,7 +195,10 @@ public class MainActivity extends Activity {
         page.setPadding(0,dp(4),0,dp(currentTab==0?72:16));
         scroll.addView(page);
         FrameLayout content=new FrameLayout(this);content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        content.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+        if(currentTab==0){
+            bankRefresh=new PullRefreshLayout(this,scroll);bankRefresh.setOnRefreshListener(this::freshSuggestions);
+            content.addView(bankRefresh,new FrameLayout.LayoutParams(-1,-1));
+        }else content.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
         root.addView(content,new LinearLayout.LayoutParams(-1,0,1));
         if (currentTab == 0||currentTab==4) suggestionsPage();
         else if (currentTab == 1) queuePage();
@@ -209,7 +207,7 @@ public class MainActivity extends Activity {
         if(currentTab==0){
             ImageButton compose=compactAction("نوشتن پیام",R.drawable.ic_compose,()->editText(""));
             compose.setBackground(iconBackground(ACCENT,UiMetrics.COMPOSE_SURFACE));compose.setColorFilter(Color.WHITE);compose.setElevation(dp(2));compose.setPadding(dp(14),dp(14),dp(14),dp(14));
-            FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH),Gravity.BOTTOM|Gravity.END);fp.setMargins(dp(12),dp(12),dp(12),dp(12));content.addView(compose,fp);
+            FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(UiMetrics.TOUCH),dp(UiMetrics.TOUCH),Gravity.BOTTOM|Gravity.RIGHT);fp.setMargins(dp(12),dp(12),dp(12),dp(12));content.addView(compose,fp);
         }
         root.addView(navigation(),new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
@@ -309,6 +307,7 @@ public class MainActivity extends Activity {
     }
 
     private void renderCatalogResults(){
+        if(bankRefresh!=null&&!refreshingSuggestions)bankRefresh.setRefreshing(false);
         if((currentTab!=0&&currentTab!=4)||catalogResults==null)return;
         LinearLayout target=catalogResults;target.removeAllViews();
         if(emptySearch())return;
@@ -691,14 +690,18 @@ public class MainActivity extends Activity {
         heading("تنظیمات ارسال", "تعداد و بازهٔ زمانی، به انتخاب تو");
         LinearLayout toneCard=card(Color.WHITE);
         toneCard.addView(label("لحن پیام‌ها",15,ACCENT,true));
-        toneCard.addView(actionButton("formal".equals(store.settings().tone)?"رسمی":"محاوره‌ای",R.drawable.ic_edit_schedule,false,()->{
-            String[] labels={"محاوره‌ای","رسمی"};String[] values={"colloquial","formal"};
-            new AlertDialog.Builder(this).setTitle("لحن پیام‌ها").setSingleChoiceItems(labels,"formal".equals(store.settings().tone)?1:0,(dialog,which)->{
-                store.saveTone(values[which]);draft.tone=values[which];
-                handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;
-                renewOptions();dialog.dismiss();renderKeepingScroll();
-            }).setNegativeButton("بستن",null).show();
-        }));
+        android.widget.Switch toneToggle=new android.widget.Switch(this);
+        boolean formal="formal".equals(store.settings().tone);toneToggle.setText(formal?"رسمی":"محاوره‌ای");toneToggle.setTextSize(15);toneToggle.setTypeface(mediumFont);
+        toneToggle.setChecked(formal);toneToggle.setShowText(false);toneToggle.setSwitchMinWidth(dp(52));toneToggle.setMinHeight(dp(48));toneToggle.setPadding(dp(4),0,dp(4),0);
+        toneToggle.setTextColor(INK);toneToggle.setContentDescription("لحن پیام‌ها: "+(formal?"رسمی":"محاوره‌ای"));
+        toneToggle.setThumbTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{ACCENT,Color.WHITE}));
+        toneToggle.setTrackTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{PALE,Color.rgb(210,207,217)}));
+        toneToggle.setOnCheckedChangeListener((toggle,checked)->{
+            String value=checked?"formal":"colloquial";store.saveTone(value);draft.tone=value;
+            toggle.setText(checked?"رسمی":"محاوره‌ای");toggle.setContentDescription("لحن پیام‌ها: "+(checked?"رسمی":"محاوره‌ای"));
+            handler.removeCallbacks(liveSearch);browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;renewOptions();
+        });
+        toneCard.addView(toneToggle,match());
         toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);
         LinearLayout destination = card(Color.WHITE);
         destination.addView(label("مقصد پیامک",15,ACCENT,true));
@@ -810,9 +813,6 @@ public class MainActivity extends Activity {
         if (!issue.isEmpty()) { toast(issue); return; }
         ir.delneveshte.app.Settings previous = store.settings();
         draft.enabled = previous.enabled;
-        if (draft.enabled && (!SmsRuntime.hasSendPermission(this) || !isActiveSim(draft.subscriptionId))) {
-            draft.enabled = false;
-        }
         store.saveSettings(draft.copy());
         store.ensureRandomSchedules(System.currentTimeMillis());
         store.requeueFuture();
@@ -942,12 +942,13 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         boolean allowed = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        SmsRuntime.reconcile(this);
         render();
         if (requestCode == REQUEST_SIM && allowed) showSimPicker();
         else if (requestCode == REQUEST_SMS && allowed)
-            toast("مجوز ثبت شد؛ برای شروع، خودت ارسال خودکار را فعال کن یا پیام موردنظر را از صف بفرست.");
+            toast(store.settings().enabled?"مجوز ثبت شد؛ پیام‌های تأییدشده پس از تکمیل تنظیمات، طبق زمان‌بندی ارسال می‌شوند.":"مجوز ثبت شد؛ ارسال خودکار همچنان متوقف است.");
         else if (!allowed && requestCode != REQUEST_NOTIFICATIONS)
-            toast("مجوز داده نشد؛ ارسال فعال نمی‌شود.");
+            toast("مجوز داده نشد؛ تا دریافت مجوز، پیامکی ارسال نمی‌شود.");
     }
 
     private void openAppSettings() {

@@ -22,8 +22,10 @@ public final class AppStore {
 
     public AppStore(Context context) {
         app = context.getApplicationContext();
+        boolean freshInstall=!app.getDatabasePath("messages.db").exists();
         synchronized (LOCK) { if (db == null) db = new Helper(app).getWritableDatabase(); }
         prefs = app.getSharedPreferences("settings", 0);
+        if(!prefs.contains("enabled")&&!prefs.edit().putBoolean("enabled",freshInstall).commit())throw new IllegalStateException("ذخیرهٔ حالت ارسال انجام نشد");
     }
     private static class Helper extends SQLiteOpenHelper {
         Helper(Context c) { super(c, "messages.db", null, 4); }

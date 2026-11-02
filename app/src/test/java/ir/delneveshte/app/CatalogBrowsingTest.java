@@ -63,12 +63,20 @@ public class CatalogBrowsingTest {
         try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();Pending old=next();assertTrue(options(a).contains(pair.getString("body_colloquial")));
             text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();text(root,"محاوره‌ای").performClick();
-            android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getListView().performItemClick(null,1,1);shadowOf(Looper.getMainLooper()).idle();
+            shadowOf(Looper.getMainLooper()).idle();
             assertEquals("formal",store.settings().tone);root=a.getWindow().getDecorView();text(root,"پیشنهادها").performClick();Pending current=next();assertTrue(current.path.contains("tone=formal"));
             current.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));await(()->!refreshing(a));
             old.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));Thread.sleep(30);shadowOf(Looper.getMainLooper()).idle();
             assertEquals(java.util.Collections.singletonList(pair.getString("body_formal")),options(a));
             root=a.getWindow().getDecorView();text(root,"جست‌وجو").performClick();typed(root,"نقره‌رو");Pending search=next();assertTrue(search.path.contains("tone=formal"));assertTrue(options(a).contains(pair.getString("body_formal")));assertFalse(options(a).contains(pair.getString("body_colloquial")));
+        }
+    }
+    @Test public void pullRefreshRequestsANewFirstPageAndEndsWhenTheResponseArrives() throws Exception {
+        try(ActivityController<TestActivity> c=Robolectric.buildActivity(TestActivity.class).setup()){
+            MainActivity a=c.get();Pending first=next();first.result.complete(page("پیام پیش از تازه‌سازی 🤍"));await(()->!refreshing(a));
+            Field f=MainActivity.class.getDeclaredField("bankRefresh");f.setAccessible(true);PullRefreshLayout pull=(PullRefreshLayout)f.get(a);assertNotNull(pull);
+            pull.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK,null);Pending refreshed=next();assertFalse(refreshed.path.contains("cursor="));assertTrue(pull.isRefreshing());
+            refreshed.result.complete(page("پیام پس از تازه‌سازی 🤍"));await(()->!refreshing(a));assertFalse(pull.isRefreshing());assertEquals(java.util.Collections.singletonList("پیام پس از تازه‌سازی 🤍"),options(a));
         }
     }
     @Test public void homeIsCompactAndOfflineLiveSearchHasClearWithoutASubmitButton() throws Exception {

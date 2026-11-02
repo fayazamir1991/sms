@@ -114,5 +114,12 @@ ui();screenshot('search')
 tap_node(ui(),description='بازگشت به پیشنهادها');assert count(ui())>0
 tap_node(ui(),description='جست‌وجو');assert_focused_search();screenshot('search-keyboard')
 print('PASS: header search action also opens an empty focused search and the keyboard automatically.')
-root=launch();tap_node(root,text='تنظیمات');ui();screenshot('settings')
+root=launch()
+compose=next(n for n in root.iter('node') if n.get('content-desc')=='نوشتن پیام')
+coords=list(map(int,re.findall(r'\d+',compose.get('bounds'))));width=int(adb('shell','wm','size').strip().split(':')[-1].strip().split('x')[0]);assert (coords[0]+coords[2])/2>width/2,'Compose must be on the physical right in RTL'
+tap_node(root,text='تنظیمات');root=ui()
+toggle=next(n for n in root.iter('node') if n.get('class')=='android.widget.Switch');assert toggle.get('checked')=='false'
+tap_node(root,text='محاوره‌ای');root=ui();assert any(n.get('class')=='android.widget.Switch' and n.get('checked')=='true' for n in root.iter('node'))
+tap_node(root,text='رسمی');ui();screenshot('settings')
+print('PASS: compose is on the physical right and tone toggles in place without a dialog.')
 print('PASS: actual APK previews captured: home, context menu, empty search, automatic keyboard and settings.')

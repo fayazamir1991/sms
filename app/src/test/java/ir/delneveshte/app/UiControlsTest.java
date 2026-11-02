@@ -46,6 +46,13 @@ public class UiControlsTest {
     private static class TextViewCheck {
         static void assertChipSpacing(android.widget.TextView chip,float density){assertTrue(chip.getPaddingLeft()>=Math.round(12*density));assertTrue(chip.getPaddingRight()>=Math.round(12*density));}
     }
+    @Test public void composeIsOnThePhysicalRightAndToneUsesANativeSwitch() throws Exception {
+        try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
+            MainActivity a=c.get();View root=a.getWindow().getDecorView();View compose=CatalogBrowsingTest.described(root,"نوشتن پیام");
+            android.widget.FrameLayout.LayoutParams lp=(android.widget.FrameLayout.LayoutParams)compose.getLayoutParams();assertEquals(android.view.Gravity.RIGHT,android.view.Gravity.getAbsoluteGravity(lp.gravity,View.LAYOUT_DIRECTION_RTL)&android.view.Gravity.HORIZONTAL_GRAVITY_MASK);
+            CatalogBrowsingTest.text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();android.widget.Switch tone=(android.widget.Switch)CatalogBrowsingTest.text(root,"محاوره‌ای");assertFalse(tone.isChecked());tone.performClick();assertTrue(tone.isChecked());assertEquals("formal",new AppStore(app).settings().tone);assertEquals("رسمی",tone.getText().toString());tone.performClick();assertEquals("colloquial",new AppStore(app).settings().tone);
+        }
+    }
     @Test public void searchClearHasASquareTouchTargetAndClearsLiveResults() throws Exception {
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();View home=a.getWindow().getDecorView();checkIconButtons(home);

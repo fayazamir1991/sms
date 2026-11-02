@@ -139,7 +139,7 @@ public final class SmsRuntime {
         String problem = readiness(app);
         if (!problem.isEmpty()) {
             cancelAlarm(app);
-            notifyStatus(app, "ارسال نیاز به بررسی دارد", problem);
+            if(store.approvedCount()>0)notifyStatus(app, "ارسال نیاز به بررسی دارد", problem);
             return;
         }
         ZoneId zone=ZoneId.systemDefault();

@@ -55,7 +55,7 @@ public class MessageActionsTest {
                 SubscriptionInfoBuilder.newBuilder().setId(7).setSimSlotIndex(0)
                         .setDisplayName("SIM 1").buildSubscriptionInfo()));
         store = new AppStore(app);
-        settings = new Settings();
+        settings = new Settings();settings.enabled=false; // These queue-action fixtures intentionally begin paused.
         settings.recipient = "+989121234567";
         settings.subscriptionId = 7;
         store.saveSettings(settings);

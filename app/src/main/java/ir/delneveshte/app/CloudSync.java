@@ -3,7 +3,6 @@ package ir.delneveshte.app;
 import android.content.Context;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,24 +24,18 @@ public final class CloudSync {
             try {
                 Transport api=new CloudApi(config);
                 api.request("/api/v1/installations/register",new JSONObject().put("app_version",BuildConfig.VERSION_NAME).put("device_hash",config.deviceHash()));
-                if(System.currentTimeMillis()-config.lastCatalog()>30*60*1000L) {
-                    for(String category:TextBank.categories()) {
-                        if("همه".equals(category))continue;
-                        JSONObject response=api.request("/api/v1/messages/browse?category="+URLEncoder.encode(category,"UTF-8"),null);
-                        JSONArray messages=response.getJSONArray("messages");
-                        if(messages.length()>50)throw new IllegalStateException("پاسخ بانک پیام‌ها معتبر نیست.");
-                        for(int i=0;i<messages.length();i++){
-                            JSONObject row=messages.getJSONObject(i);
-                            if(!category.equals(row.getString("category"))||row.getString("body").length()>2400)throw new IllegalStateException("متن پیشنهادی معتبر نیست.");
-                        }
-                        if(stopped.get()||!config.enabled()||config.generation()!=generation)return false;
-                        store.replaceCatalog(category,messages);
-                    }
-                    config.catalogUpdated();
-                }
+                config.registrationSucceeded(generation);
                 long started=System.currentTimeMillis();int batches=0;
                 while(!stopped.get()&&config.enabled()&&config.generation()==generation&&batches++<20&&System.currentTimeMillis()-started<90000) {
                     if(!uploadBatch(store,api,config,generation))break;
+                }
+                if(System.currentTimeMillis()-config.lastCatalog()>30*60*1000L) {
+                    JSONObject response=new CatalogClient(api,config).browse("همه","",null);
+                    JSONArray messages=response.getJSONArray("messages");
+                    if(messages.length()>20)throw new IllegalStateException("پاسخ بانک پیام‌ها معتبر نیست.");
+                    if(stopped.get()||!config.enabled()||config.generation()!=generation)return false;
+                    store.rememberCatalog(messages);
+                    config.catalogUpdated();
                 }
                 if(stopped.get()||!config.enabled()||config.generation()!=generation)return false;
                 config.success();return store.pendingSyncCount()>0;

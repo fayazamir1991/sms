@@ -113,3 +113,14 @@ test('browse cursor cannot be used with a different query or modified signature'
  assert.equal((await handle(request('/api/v1/messages/browse?q=other&cursor='+encodeURIComponent(first.next_cursor)),env)).status,410);
  assert.equal((await handle(request('/api/v1/messages/browse?cursor='+encodeURIComponent(first.next_cursor+'bad')),env)).status,410);env.DB.close();
 });
+
+test('Persian search tolerates half-spaces, line breaks and typed spacing without losing literal wildcard semantics',async()=>{
+ const env=await environment();await register(env);
+ const {normalizeSearch}=await import('../src/catalog-search.mjs');
+ const body='جانم، دِل‌تنگِ توام\nدوستت دارم و كنارت آرامم 💕';
+ await env.DB.prepare('INSERT INTO catalog_messages(id,body,fingerprint,category,active,created_at,search_text) VALUES(?,?,?,?,1,?,?)').bind(crypto.randomUUID(),body,'spacing-search','دلتنگی',Date.now(),normalizeSearch(body)).run();
+ for(const q of ['دلتنگ','دل تنگ','دوستتدارم','دوستت دارم','توام دوستت','کنارت']){
+  const page=await (await handle(request('/api/v1/messages/browse?q='+encodeURIComponent(q)),env)).json();assert.equal(page.messages.length,1,q);
+ }
+ env.DB.close();
+});

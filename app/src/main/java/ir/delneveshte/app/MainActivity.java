@@ -67,7 +67,8 @@ public class MainActivity extends Activity {
     private String category;
     private List<String> options = new ArrayList<>();
     private boolean refreshingSuggestions;
-    private String catalogQuery="",catalogCursor;
+    private String catalogQuery="",catalogSearchDraft="",catalogCursor;
+    private LinearLayout catalogResults;
     private boolean catalogRequested;
     private boolean usingOfflineCatalog=true;
     private boolean catalogHasMore=true;
@@ -93,6 +94,7 @@ public class MainActivity extends Activity {
         if (savedInstanceState != null) {
             currentTab = savedInstanceState.getInt("tab", 0);
             catalogQuery=savedInstanceState.getString("catalog_query","");
+            catalogSearchDraft=savedInstanceState.getString("catalog_search_draft",catalogQuery);
             category = savedInstanceState.getString("category", category);
             draft.recipient = savedInstanceState.getString("draft_recipient", draft.recipient);
             draft.nickname = savedInstanceState.getString("draft_nickname", draft.nickname);
@@ -145,6 +147,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putString("catalog_query",catalogQuery);
+        state.putString("catalog_search_draft",catalogSearchDraft);
         state.putInt("tab", currentTab);
         state.putString("category", category);
         state.putString("draft_recipient", draft.recipient);
@@ -165,6 +168,7 @@ public class MainActivity extends Activity {
     }
 
     private void render() {
+        catalogResults=null;
         LinearLayout root = vertical();
         root.setBackgroundColor(BG);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -258,21 +262,32 @@ public class MainActivity extends Activity {
             chip.setMinHeight(dp(44));
             chip.setPadding(dp(17), dp(8), dp(17), dp(8));
             chip.setBackground(ripple(option.equals(category) ? ROSE : Color.WHITE, 22));
-            chip.setOnClickListener(v -> { category = option; freshSuggestions(); });
+            chip.setOnClickListener(v -> { category = option; render();freshSuggestions(); });
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
             cp.setMarginEnd(dp(8));
             chips.addView(chip, cp);
         }
         categories.addView(chips);
         addPage(categories, 0, 14);
-        if(usingOfflineCatalog&&!refreshingSuggestions)page.addView(body("آفلاین · جست‌وجو در پیام‌های ذخیره‌شده",12));
-        EditText search=input(catalogQuery,"جست‌وجو در متن پیام‌ها",InputType.TYPE_CLASS_TEXT);
+        EditText search=input(catalogSearchDraft,"جست‌وجو در متن پیام‌ها",InputType.TYPE_CLASS_TEXT);
+        watch(search,value->catalogSearchDraft=value);
         search.setSingleLine(true);search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        Runnable submit=()->{catalogQuery=search.getText().toString().trim();freshSuggestions();};
+        Runnable submit=()->{catalogQuery=search.getText().toString().trim();catalogSearchDraft=catalogQuery;freshSuggestions();};
         search.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){submit.run();return true;}return false;});
         page.addView(search,match());page.addView(button("جست‌وجو",false,submit));
-        page.addView(label("پیام‌ها: "+fa(options.size()),12,MUTED,false));
-        if (options.isEmpty()) page.addView(body(refreshingSuggestions?"در حال دریافت پیام‌ها…":"پیامی پیدا نشد؛ عبارت یا دستهٔ دیگری را امتحان کن.",14));
+        catalogResults=vertical();page.addView(catalogResults,match());
+        renderCatalogResults();
+        addPage(button("متن خودم را می‌نویسم", false, () -> editText("")), 10, 0);
+    }
+
+    private void renderCatalogResults(){
+        if(currentTab!=0||catalogResults==null)return;
+        LinearLayout target=catalogResults;target.removeAllViews();
+        if(refreshingSuggestions)target.addView(body("در حال به‌روزرسانی از سرور… پیام‌های ذخیره‌شده در دسترس‌اند.",12));
+        else if(usingOfflineCatalog)target.addView(body("پیام‌های ذخیره‌شده · جست‌وجو در بانک روی گوشی",12));
+        target.addView(label("پیام‌ها: "+fa(options.size()),12,MUTED,false));
+        if (options.isEmpty()) target.addView(body(refreshingSuggestions?"در حال دریافت پیام‌ها…":"پیامی پیدا نشد؛ عبارت یا دستهٔ دیگری را امتحان کن.",14));
+        if(options.isEmpty()&&!catalogQuery.isEmpty()&&!"همه".equals(category))target.addView(button("جست‌وجو در همهٔ دسته‌ها",false,()->{category="همه";render();freshSuggestions();}));
         int number = 0;
         for (String text : options) {
             LinearLayout c = card(Color.WHITE);
@@ -311,40 +326,36 @@ public class MainActivity extends Activity {
             actions.addView(edit, editParams);
             actions.addView(send, weighted());
             add(c, actions, 8, 0);
-            page.addView(c);
+            target.addView(c);
         }
-        if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);page.addView(more);}
-        else if(!options.isEmpty())page.addView(body("به پایان این فهرست رسیدی.",12));
-        addPage(button("متن خودم را می‌نویسم", false, () -> editText("")), 10, 0);
+        if(catalogHasMore){Button more=button(refreshingSuggestions?"در حال دریافت…":"بارگذاری پیام‌های بیشتر",false,()->loadCatalogPage(false));more.setEnabled(!refreshingSuggestions);target.addView(more);}
+        else if(!options.isEmpty())target.addView(body("به پایان این فهرست رسیدی.",12));
+
     }
 
     private void freshSuggestions(){loadCatalogPage(true);}
     private void loadCatalogPage(boolean reset){
         catalogRequested=true;
         if(!reset&&refreshingSuggestions)return;
-        if(reset){browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;options.clear();credits.clear();}
+        if(reset){browseGeneration++;catalogCursor=null;catalogHasMore=true;localCatalogOffset=0;usingOfflineCatalog=true;renewOptions();}
         CloudConfig cloud=new CloudConfig(this);
-        if(!cloud.enabled()){
-            if(reset)renewOptions();else appendLocalPage();
-            refreshingSuggestions=false;usingOfflineCatalog=true;if(reset)render();else renderKeepingScroll();return;
+        if(!cloud.enabled()||(!reset&&usingOfflineCatalog)){
+            if(!reset)appendLocalPage();
+            refreshingSuggestions=false;usingOfflineCatalog=true;renderCatalogResults();return;
         }
-        final int generation=browseGeneration;final String query=catalogQuery,chosenCategory=category,cursor=catalogCursor;
-        refreshingSuggestions=true;renderKeepingScroll();
+        final int generation=browseGeneration,cloudGeneration=cloud.generation();final String query=catalogQuery,chosenCategory=category,cursor=catalogCursor;
+        refreshingSuggestions=true;renderCatalogResults();
         new Thread(()->{
             org.json.JSONObject response=null;String failure=null;
             try{
-                CloudApi api=new CloudApi(new CloudConfig(getApplicationContext()));
-                api.request("/api/v1/installations/register",new org.json.JSONObject().put("app_version",BuildConfig.VERSION_NAME).put("device_hash",cloud.deviceHash()));
-                String path="/api/v1/messages/browse?category="+java.net.URLEncoder.encode(chosenCategory,"UTF-8")+"&q="+java.net.URLEncoder.encode(query,"UTF-8");
-                if(cursor!=null)path+="&cursor="+java.net.URLEncoder.encode(cursor,"UTF-8");
-                response=api.request(path,null);
+                response=new CatalogClient(catalogTransport(cloud),cloud).browse(chosenCategory,query,cursor);
                 org.json.JSONArray rows=response.getJSONArray("messages");if(rows.length()>20)throw new IllegalStateException();
                 for(int i=0;i<rows.length();i++){org.json.JSONObject row=rows.getJSONObject(i);if(row.getString("body").length()>1200||(!"همه".equals(chosenCategory)&&!chosenCategory.equals(row.getString("category"))))throw new IllegalStateException();}
-                if(generation==browseGeneration)store.rememberCatalog(rows);
+                if(generation==browseGeneration&&cloudGeneration==cloud.generation()&&cloud.enabled())store.rememberCatalog(rows);
             }catch(Exception error){failure=error instanceof CloudApi.Failure?error.getMessage():"دریافت پیام‌ها کامل نشد؛ اتصال به سرور را بررسی کن.";}
             final org.json.JSONObject data=response;final String error=failure;
             handler.post(()->{
-                if(generation!=browseGeneration||isFinishing()||isDestroyed())return;
+                if(generation!=browseGeneration||cloudGeneration!=cloud.generation()||!cloud.enabled()||isFinishing()||isDestroyed())return;
                 refreshingSuggestions=false;
                 if(error==null&&data!=null){
                     usingOfflineCatalog=false;
@@ -354,12 +365,13 @@ public class MainActivity extends Activity {
                         catalogCursor=data.isNull("next_cursor")?null:data.optString("next_cursor",null);catalogHasMore=data.optBoolean("has_more",false);cloud.catalogUpdated();
                     }catch(Exception ignored){cloud.error("پاسخ جست‌وجو معتبر نیست.");}
                 }else{cloud.error(error);if(reset&&options.isEmpty()){usingOfflineCatalog=true;renewOptions();}toast(error);}
-                if(reset)render();else renderKeepingScroll();
+                renderCatalogResults();
             });
         },"delneveshte-catalog-browse").start();
     }
+    CloudSync.Transport catalogTransport(CloudConfig cloud){return new CloudApi(cloud);}
     private void appendOption(String raw){
-        String[] parts=raw.split("\\n—",2);String text=parts[0].trim();
+        String[] parts=raw.split("\\n—",2);String text=parts[0].trim().replace("{name}",draft==null||draft.nickname.trim().isEmpty()?"عزیزم":draft.nickname.trim());
         if(text.matches("(?s).*https?://.*")||text.matches("(?s).*[A-Za-z]{3,}.*")||options.contains(text))return;
         credits.put(text,parts.length>1?"شاعر: "+parts[1]:store.catalogCredit(raw));options.add(text);
     }
@@ -367,11 +379,11 @@ public class MainActivity extends Activity {
         java.util.LinkedHashSet<String> all=new java.util.LinkedHashSet<>();
         java.util.Random fixed=new java.util.Random(7);
         for(int i=0;i<100;i++)all.addAll(TextBank.suggestions(category,draft==null?"عزیزم":draft.nickname,fixed));
-        java.util.List<String> result=new ArrayList<>();for(String text:all)if(text.contains(catalogQuery))result.add(text);return result;
+        java.util.List<String> result=new ArrayList<>();for(String text:all)if(CatalogSearch.matches(text,catalogQuery))result.add(text);return result;
     }
     private void appendLocalPage(){
         java.util.List<String> rows=store.localCatalogPage(category,catalogQuery,localCatalogOffset);
-        if(rows.isEmpty()&&!store.hasCachedCatalog(category)){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
+        if(store.localCatalogPage(category,catalogQuery,0).isEmpty()){java.util.List<String> pool=offlinePool();int end=Math.min(pool.size(),localCatalogOffset+21);if(localCatalogOffset<end)rows=new ArrayList<>(pool.subList(localCatalogOffset,end));}
         catalogHasMore=rows.size()>20;
         for(int i=0;i<Math.min(20,rows.size());i++)appendOption(rows.get(i));localCatalogOffset+=20;
     }

@@ -244,9 +244,15 @@ public final class AppStore {
     }
     public List<String> localCatalogPage(String category,String query,int offset){
         synchronized(LOCK){List<String> out=new ArrayList<>();List<String> args=new ArrayList<>();
-            String where="body LIKE ? ESCAPE char(92)";args.add("%"+query.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")+"%");
+            String where="1=1";
             if(!"همه".equals(category)){where+=" AND category=?";args.add(category);}
-            try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache WHERE "+where+" ORDER BY id LIMIT 21 OFFSET "+Math.max(0,offset),args.toArray(new String[0]))){while(c.moveToNext())out.add(c.getString(0));}return out;
+            String key=CatalogSearch.key(query);int skipped=0;
+            try(Cursor c=db.rawQuery("SELECT body FROM catalog_cache WHERE "+where+" ORDER BY id",args.toArray(new String[0]))){
+                while(c.moveToNext())if(CatalogSearch.key(c.getString(0)).contains(key)){
+                    if(skipped++<Math.max(0,offset))continue;
+                    out.add(c.getString(0));if(out.size()==21)break;
+                }
+            }return out;
         }
     }
     public String catalogCredit(String text) {

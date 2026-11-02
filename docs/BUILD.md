@@ -23,3 +23,5 @@ Robolectric covers existing SMS approval actions plus database migration and clo
 ## Docker checks
 
 Run `docker build -t delneveshte-test .` from the repository root, then `python3 server/scripts/docker-smoke.py delneveshte-test`. This runs and replaces real containers, verifies HTTP API/admin authorization behind an HTTPS public origin, and confirms persistence on a named volume. It creates ephemeral test credentials and removes its own containers and volume on completion.
+
+Version 0.8 adds controlled delayed-network Robolectric tests for immediate cached display, preserving in-progress search input, stale-response rejection and install-registration recovery. Local direct SDK build and the preserved-certificate check work without a Gradle daemon; managed sandbox socket restrictions may require Gradle lint and Robolectric to run in GitHub Actions.

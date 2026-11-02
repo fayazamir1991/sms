@@ -1,5 +1,5 @@
 import {hmac,equal,bytesToBase64,base64ToBytes} from './crypto.mjs';
-import {likePattern,normalizeSearch} from './catalog-search.mjs';
+import {likePattern,normalizeSearch,compactSearchColumn} from './catalog-search.mjs';
 const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 export async function browseCatalog(request,env,installation){
  const url=new URL(request.url),q=url.searchParams.get('q')||'',category=url.searchParams.get('category')||'همه';
@@ -19,7 +19,7 @@ export async function browseCatalog(request,env,installation){
  }
  let where='c.active=1 AND c.rowid<=? AND c.created_at<=?',args=[cursor.seed,cursor.max,cursor.started];
  if(category!=='همه'){where+=' AND c.category=?';args.push(category);}
- if(q){where+=" AND COALESCE(NULLIF(c.search_text,''),c.body) LIKE ? ESCAPE char(92)";args.push(likePattern(q));}
+ if(q){where+=` AND ${compactSearchColumn("COALESCE(NULLIF(c.search_text,''),c.body)")} LIKE ? ESCAPE char(92)`;args.push(likePattern(q));}
  const sql=`WITH candidates AS (SELECT c.id,c.body,c.category,o.source,o.author,o.source_url,o.rights,o.language,o.license_url,((c.rowid*1103515245+?)%2147483647) AS rank FROM catalog_messages c LEFT JOIN catalog_origins o ON o.catalog_id=c.id WHERE ${where}) SELECT * FROM candidates WHERE rank>? OR (rank=? AND id>?) ORDER BY rank,id LIMIT 21`;
  args.push(cursor.rank,cursor.rank,cursor.last);const {results}=await env.DB.prepare(sql).bind(...args).all();
  const more=results.length>20,rows=results.slice(0,20);let next=null;

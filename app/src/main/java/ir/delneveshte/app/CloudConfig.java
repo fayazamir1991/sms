@@ -18,6 +18,8 @@ public final class CloudConfig {
     public String baseUrl() { return prefs.getString("url",BuildConfig.API_BASE_URL); }
     public boolean enabled() { return prefs.getBoolean("enabled",true)&&!baseUrl().isEmpty(); }
     public int generation() { return prefs.getInt("generation",0); }
+    public boolean registered() { return baseUrl().equals(prefs.getString("registered_url",""))&&prefs.getInt("registered_generation",-1)==generation(); }
+    public void registrationSucceeded(int expectedGeneration) { if(generation()!=expectedGeneration)return;prefs.edit().putString("registered_url",baseUrl()).putInt("registered_generation",generation()).apply(); }
     public long lastSync() { return prefs.getLong("last_sync",0); }
     public long lastCatalog() { return prefs.getLong("last_catalog",0); }
     public String lastError() { return prefs.getString("error",""); }

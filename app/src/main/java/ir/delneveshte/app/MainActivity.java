@@ -64,6 +64,9 @@ public class MainActivity extends Activity {
     private EditText searchInput;
     private boolean searchKeyboardRequested;
     private int searchKeyboardAttempts;
+    private boolean updateCheckStarted;
+    private int updatePolls;
+    private final Runnable updatePoll=new Runnable(){@Override public void run(){if(!isFinishing()&&!isDestroyed()&&updatePolls++<180){if(!AppUpdater.installCompleted(MainActivity.this))handler.postDelayed(this,2000);}}};
     private EditText activeEditor;
     private AlertDialog activeEditorDialog;
     private int currentTab;
@@ -140,6 +143,8 @@ public class MainActivity extends Activity {
         // Android removes alarms on force-stop; reopening restores the approved schedule.
         SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
+        AppUpdater.installCompleted(this);
+        if(!updateCheckStarted){updateCheckStarted=true;checkForUpdates(false);}
         if(options.isEmpty()&&(!catalogRequested||usingOfflineCatalog))renewOptions();
         render();
         handler.removeCallbacks(refresh);
@@ -150,7 +155,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause() {
         searchKeyboardRequested=false;
-        handler.removeCallbacks(refresh);
+        handler.removeCallbacks(refresh);handler.removeCallbacks(updatePoll);
         handler.removeCallbacks(liveSearch);if(messageSearch!=null)messageSearch.cancel();
         super.onPause();
     }
@@ -708,6 +713,7 @@ public class MainActivity extends Activity {
         });
         toneCard.addView(toneChoices,match());
         toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);
+        addPage(settingsLink("بررسی به‌روزرسانی برنامه",R.drawable.ic_info,()->checkForUpdates(true)),8,0);
         LinearLayout destination = card(Color.WHITE);
         destination.addView(label("مقصد پیامک",15,ACCENT,true));
         destination.addView(fieldTitle("شمارهٔ همسرت"));
@@ -787,6 +793,17 @@ public class MainActivity extends Activity {
         page.addView(phoneHelp);
         addPage(settingsLink("درباره و مجوزها",R.drawable.ic_info,this::showLicenses),0,8);
         addPage(body("دل‌نوشته · " + BuildConfig.VERSION_NAME + "", 12), 0, 0);
+    }
+
+    private void checkForUpdates(boolean manual){
+        AppUpdater.check(this,(release,error)->{
+            if(isFinishing()||isDestroyed())return;
+            if(error!=null){if(manual)toast("بررسی به‌روزرسانی ممکن نشد؛ اتصال اینترنت را بررسی کن.");return;}
+            if(release==null){if(manual)toast("برنامه به‌روز است.");return;}
+            new AlertDialog.Builder(this).setTitle("نسخهٔ تازه آماده است")
+                    .setMessage("نسخهٔ "+fa(release.version)+" منتشر شده. فایل نصب از گیت‌هاب دریافت و امضای آن بررسی می‌شود؛ نصب نهایی را خود اندروید از تو تأیید می‌گیرد.")
+                    .setNegativeButton("بعداً",(d,w)->{}).setPositiveButton("دریافت به‌روزرسانی",(d,w)->{try{AppUpdater.download(this,release);updatePolls=0;handler.removeCallbacks(updatePoll);handler.postDelayed(updatePoll,2000);toast("دریافت به‌روزرسانی آغاز شد.");}catch(Exception e){toast("شروع دریافت به‌روزرسانی ممکن نشد.");}}).show();
+        });
     }
 
     private void showLicenses(){

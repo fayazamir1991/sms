@@ -166,7 +166,7 @@ public class MessageActionsTest {
     @Test public void queueEditorCancelChangesNothingAndSavingChangesTheSameMessage() throws Exception {
         settings.startMinute=0;settings.endMinute=1440;store.saveSettings(settings);long id=store.approve("پیام صف ❤️",settings,"SIM");
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();Message before=store.get(id);
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();Message before=store.get(id);
             queueAction(a,"پیام صف ❤️",1);AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(before.revision,store.get(id).revision);
             queueAction(a,"پیام صف ❤️",1);dialog=ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
             assertEquals(1,store.queue().size());assertEquals(id,store.queue().get(0).id);assertEquals("FIXED",store.get(id).sendMode);assertEquals(before.plannedAt,store.get(id).requestedAt);
@@ -176,7 +176,7 @@ public class MessageActionsTest {
     @Test public void queueCardTapAndLongPressOpenActionsWithConfirmationForSendingAndRemoval() throws Exception {
         String text="پیام صف برای منو ❤️";long id=store.approve(text,settings,"SIM");
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();
             View body=CatalogBrowsingTest.text(root(a),text);assertTrue(body.performLongClick());shadowOf(Looper.getMainLooper()).idle();
             android.widget.PopupMenu menu=org.robolectric.shadows.ShadowPopupMenu.getLatestPopupMenu();assertEquals(5,menu.getMenu().size());
             assertTrue(menu.getMenu().performIdentifierAction(4,0));assertEquals(text,((android.content.ClipboardManager)a.getSystemService(Context.CLIPBOARD_SERVICE)).getPrimaryClip().getItemAt(0).getText().toString());
@@ -190,7 +190,7 @@ public class MessageActionsTest {
     @Test public void compactQueueCardHasOnlyTrashAndRemovalStillRequiresConfirmation(){
         String text="کارت جمع‌وجور صف ❤️";long id=store.approve(text,settings,"SIM");
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();
             ViewGroup card=(ViewGroup)CatalogBrowsingTest.text(root(a),text).getParent();assertEquals(0,actionCount(card,android.widget.Button.class));assertEquals(1,actionCount(card,android.widget.ImageButton.class));assertNull(CatalogBrowsingTest.text(card,settings.recipient));
             queueAction(a,text,5);AlertDialog info=ShadowAlertDialog.getLatestAlertDialog();assertTrue(shadowOf(info).getMessage().toString().contains(settings.recipient));info.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
             CatalogBrowsingTest.described(root(a),"حذف از صف").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog confirm=ShadowAlertDialog.getLatestAlertDialog();assertEquals(1,store.queue().size());confirm.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals(1,store.queue().size());
@@ -200,7 +200,7 @@ public class MessageActionsTest {
     @Test public void tomorrowShortcutPreservesClockAndToastUsesRelativeDate(){
         java.time.ZoneId zone=java.time.ZoneId.systemDefault();long initial=java.time.LocalDate.now(zone).plusDays(2).atTime(11,35).atZone(zone).toInstant().toEpochMilli();String text="فردا یاد تو ❤️";long id=store.approveFixed(text,settings,"SIM",initial);
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View view=form.getWindow().getDecorView();
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View view=form.getWindow().getDecorView();
             for(String label:new String[]{"امروز","فردا","تاریخ دیگر"})assertNotNull(CatalogBrowsingTest.text(view,label));CatalogBrowsingTest.text(view,"فردا").performClick();form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
             long expected=java.time.LocalDate.now(zone).plusDays(1).atTime(11,35).atZone(zone).toInstant().toEpochMilli();assertEquals(expected,store.get(id).requestedAt);assertEquals("زمان ارسال: فردا ساعت ۱۱:۳۵",ShadowToast.getTextOfLatestToast().toString());
         }
@@ -208,7 +208,7 @@ public class MessageActionsTest {
     @Test public void otherDateOpensSolarCalendarAndSelectsPersianNewYearWithoutChangingClock(){
         java.time.ZoneId zone=java.time.ZoneId.systemDefault();java.time.LocalDate initial=java.time.LocalDate.now(zone).plusDays(2);String text="قرار نوروز ❤️";long id=store.approveFixed(text,settings,"SIM",initial.atTime(10,20).atZone(zone).toInstant().toEpochMilli());
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.text(form.getWindow().getDecorView(),"تاریخ دیگر").performClick();shadowOf(Looper.getMainLooper()).idle();
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.text(form.getWindow().getDecorView(),"تاریخ دیگر").performClick();shadowOf(Looper.getMainLooper()).idle();
             AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();assertEquals("انتخاب تاریخ خورشیدی",shadowOf(picker).getTitle().toString());assertEquals(0,actionCount(picker.getWindow().getDecorView(),android.widget.DatePicker.class));
             CatalogBrowsingTest.described(picker.getWindow().getDecorView(),"انتخاب ماه و سال خورشیدی").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();
             int year=PersianDates.fields(java.time.LocalDate.now(zone),zone)[0]+1;((android.widget.NumberPicker)CatalogBrowsingTest.described(chooser.getWindow().getDecorView(),"سال خورشیدی")).setValue(year);((android.widget.NumberPicker)CatalogBrowsingTest.described(chooser.getWindow().getDecorView(),"ماه خورشیدی")).setValue(1);chooser.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
@@ -218,7 +218,7 @@ public class MessageActionsTest {
     @Test public void cancellingSolarPickerOrChoosingPastTimeCannotMutateQueuedMessage(){
         java.time.ZoneId zone=java.time.ZoneId.systemDefault();String text="زمان محفوظ ❤️";long at=java.time.LocalDate.now(zone).plusDays(1).atTime(0,0).atZone(zone).toInstant().toEpochMilli();long id=store.approveFixed(text,settings,"SIM",at);long revision=store.get(id).revision;
         try(ActivityController<OfflineActivity> c=Robolectric.buildActivity(OfflineActivity.class).setup()){
-            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف ارسال").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.text(form.getWindow().getDecorView(),"تاریخ دیگر").performClick();shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(form.isShowing());assertEquals(revision,store.get(id).revision);
+            MainActivity a=c.get();CatalogBrowsingTest.text(root(a),"صف").performClick();shadowOf(Looper.getMainLooper()).idle();queueAction(a,text,1);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();CatalogBrowsingTest.text(form.getWindow().getDecorView(),"تاریخ دیگر").performClick();shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(form.isShowing());assertEquals(revision,store.get(id).revision);
             CatalogBrowsingTest.text(form.getWindow().getDecorView(),"امروز").performClick();form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertTrue(form.isShowing());assertEquals(at,store.get(id).requestedAt);assertEquals(revision,store.get(id).revision);
         }
     }

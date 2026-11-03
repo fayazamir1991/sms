@@ -265,7 +265,7 @@ public class MainActivity extends Activity {
         View line=new View(this);line.setBackgroundColor(LINE);container.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
         LinearLayout nav=horizontal();nav.setPadding(dp(6),dp(2),dp(6),dp(2));nav.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout right=horizontal();right.addView(navigationItem("صف",R.drawable.ic_queue,1,false),new LinearLayout.LayoutParams(0,-2,1));right.addView(navigationItem("سابقه",R.drawable.ic_history,2,false),new LinearLayout.LayoutParams(0,-2,1));
-        LinearLayout left=horizontal();left.addView(navigationItem("تنظیمات",R.drawable.ic_settings,3,false),new LinearLayout.LayoutParams(0,-2,1));left.addView(navigationItem("جست‌وجو",R.drawable.ic_search,4,false),new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout left=horizontal();left.addView(navigationItem("جست‌وجو",R.drawable.ic_search,4,false),new LinearLayout.LayoutParams(0,-2,1));left.addView(navigationItem("تنظیمات",R.drawable.ic_settings,3,false),new LinearLayout.LayoutParams(0,-2,1));
         nav.addView(right,new LinearLayout.LayoutParams(0,-2,1));
         nav.addView(navigationItem("بانک پیام‌ها",R.drawable.ic_home,0,true),new LinearLayout.LayoutParams(dp(76),-2));
         nav.addView(left,new LinearLayout.LayoutParams(0,-2,1));
@@ -274,8 +274,8 @@ public class MainActivity extends Activity {
 
     private View navigationItem(String title,int iconResource,int tab,boolean primary){
         boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(primary?64:52));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
-        FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(primary?PALE:(selected?PALE:Color.TRANSPARENT),primary?18:12,0));
-        ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?24:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(primary?44:36),dp(primary?36:28)));
+        FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(primary?Color.TRANSPARENT:(selected?PALE:Color.TRANSPARENT),12,0));
+        ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?30:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(primary?40:36),dp(primary?32:28)));
         TextView label=label(title,primary?10:11,selected?ACCENT:MUTED,selected||primary);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
         item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
     }

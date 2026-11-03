@@ -24,6 +24,7 @@ jobs:
       API_BASE_URL: ${{ vars.API_BASE_URL }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+      APP_RELEASE_UPLOAD_TOKEN: ${{ secrets.APP_RELEASE_UPLOAD_TOKEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -107,14 +108,28 @@ jobs:
             git commit -m "Add Android interface previews for $(python3 scripts/version.py)"
             git push origin HEAD:main
           fi
-      - uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
-        with:
-          name: delneveshte-signed-apk
-          path: app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
+      - name: Upload APK to the persistent application server
+        id: server_upload
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.APP_RELEASE_UPLOAD_TOKEN != ''
+        run: |
+          version="$(python3 scripts/version.py)"
+          apk="app/build/outputs/apk/release/app-release.apk"
+          checksum="$(sha256sum "$apk" | cut -d ' ' -f 1)"
+          server="${API_BASE_URL:-$(cat app/api-base-url.txt)}"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors \
+            -X POST "$server/api/admin/app-releases" \
+            -H "Authorization: Bearer $APP_RELEASE_UPLOAD_TOKEN" \
+            -H "X-Release-Version: $version" -H "X-APK-SHA256: $checksum" \
+            -H 'Content-Type: application/vnd.android.package-archive' \
+            --data-binary "@$apk"
+      - name: Report missing persistent-server upload credential
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.APP_RELEASE_UPLOAD_TOKEN == ''
+        run: echo '::warning::Set GitHub Actions secret APP_RELEASE_UPLOAD_TOKEN and matching APP_RELEASE_UPLOAD_TOKEN_SHA256 on the app server to publish update APKs to persistent storage.'
       - name: Publish GitHub releases
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.server_upload.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/publish-releases.sh
+      - name: Explain why publication waits for server credentials
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.server_upload.outcome != 'success'
+        run: echo '::warning::The APK was not uploaded to persistent server storage, so no release tag was created. Configure APP_RELEASE_UPLOAD_TOKEN in GitHub and its SHA-256 on the server, then rerun this workflow.'

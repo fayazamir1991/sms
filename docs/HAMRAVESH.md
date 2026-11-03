@@ -82,3 +82,9 @@ docker compose logs --tail=50 server
 ```
 
 پورت `8080` فقط روی localhost منتشر می‌شود. `docker compose down` داده‌ها را نگه می‌دارد؛ `docker compose down -v` Volume را حذف می‌کند و برای آپدیت مناسب نیست. فایل `.env` و کلیدها هرگز نباید commit شوند.
+
+## به‌روزرسانی APK از دیسک پایدار
+
+APKهای نسخه‌ای در `/data/app-releases` ذخیره می‌شوند. API عمومی `GET /api/app/latest` manifest شامل نسخه، URL و SHA-256 را می‌دهد؛ فایل نسخه از `GET /api/app/releases/delneveshte-vX.Y.Z.apk` دریافت می‌شود. بارگذاری نسخه به `POST /api/admin/app-releases` با هدرهای `Authorization: Bearer <token>`, `X-Release-Version`, `X-APK-SHA256` و بدنهٔ خام APK انجام می‌شود. نسخه باید جدیدتر باشد؛ فایل‌ها بازنویسی نمی‌شوند.
+
+برای فعال‌کردن بارگذاری خودکار، یک token تصادفی بساز و مقدار خام آن را فقط در GitHub → Settings → Secrets and variables → Actions با نام `APP_RELEASE_UPLOAD_TOKEN` ذخیره کن. SHA-256 همان token را در متغیر خصوصی Hamravesh با نام `APP_RELEASE_UPLOAD_TOKEN_SHA256` بگذار. token یا hash آن را در چت یا ریپازیتوری قرار نده. سرویس Docker باید دیسک پایدار را روی `/data` mount کند؛ بدون mount، فایل‌های APK پس از تعویض container می‌روند. Android workflow ابتدا امضا و آزمون‌ها را بررسی می‌کند، سپس APK را به سرور می‌فرستد و GitHub Release را بدون فایل APK منتشر می‌کند. اگر secret تنظیم نشده باشد، بارگذاری انجام نمی‌شود و نسخه روی سرور در دسترس موبایل نخواهد بود.

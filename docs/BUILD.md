@@ -12,7 +12,7 @@ Install JDK 17 or 21, Gradle 8.9, Android SDK platform 35 and build-tools 35.0.0
 
 The app has no external runtime libraries. Set JAVA_HOME to JDK 17 or 21 and ANDROID_HOME to the SDK. Run `python3 build-direct.py`. Output: `build/direct/delneveshte-0.3.0.apk`. This uses aapt2, javac, D8, zipalign and apksigner. It refuses to create a replacement signing key. Supply ANDROID_SIGNING_STORE and ANDROID_SIGNING_PASSWORD for the privately preserved key, or retain the original local build/direct/debug.keystore. The certificate must match signing-certificate.sha256.
 
-For distribution, first deploy the Docker backend as documented in HAMRAVESH.md and set the API_BASE_URL GitHub repository variable to its HTTPS origin. The optional Cloudflare workflow can instead commit the endpoint. GitHub Actions restores the original key from Secrets, builds release, verifies the certificate, and publishes v0.3.0 only if it does not already exist. Debug APKs are for development and must not be distributed as compatible updates.
+For distribution, first deploy the Docker backend as documented in HAMRAVESH.md and set the API_BASE_URL GitHub repository variable to its HTTPS origin. The optional Cloudflare workflow can instead commit the endpoint. GitHub Actions restores the original key from Secrets, builds release, verifies the certificate, and uploads the APK to persistent server storage. GitHub Releases contain notes/previews only; APK binaries and workflow artifacts are not published there. The upload needs APP_RELEASE_UPLOAD_TOKEN in GitHub Actions and its SHA-256 digest in the server environment. Debug APKs are for development and must not be distributed as compatible updates.
 
 ## Server checks
 

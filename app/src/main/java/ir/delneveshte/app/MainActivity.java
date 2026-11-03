@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
     private int searchKeyboardAttempts;
     private boolean updateCheckStarted;
     private int updatePolls;
+    private final Runnable updateRefresh=new Runnable(){@Override public void run(){if(!isFinishing()&&!isDestroyed()){checkForUpdates(false);handler.postDelayed(this,6*60*60*1000L);}}};
     private final Runnable updatePoll=new Runnable(){@Override public void run(){if(!isFinishing()&&!isDestroyed()&&updatePolls++<180){if(!AppUpdater.installCompleted(MainActivity.this))handler.postDelayed(this,2000);}}};
     private EditText activeEditor;
     private AlertDialog activeEditorDialog;
@@ -144,7 +145,7 @@ public class MainActivity extends Activity {
         SmsRuntime.reconcile(this);
         CloudScheduler.ensure(this);
         AppUpdater.installCompleted(this);
-        if(!updateCheckStarted){updateCheckStarted=true;checkForUpdates(false);}
+        if(!updateCheckStarted){updateCheckStarted=true;checkForUpdates(false);}handler.removeCallbacks(updateRefresh);handler.postDelayed(updateRefresh,6*60*60*1000L);
         if(options.isEmpty()&&(!catalogRequested||usingOfflineCatalog))renewOptions();
         render();
         handler.removeCallbacks(refresh);
@@ -155,7 +156,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause() {
         searchKeyboardRequested=false;
-        handler.removeCallbacks(refresh);handler.removeCallbacks(updatePoll);
+        handler.removeCallbacks(refresh);handler.removeCallbacks(updatePoll);handler.removeCallbacks(updateRefresh);
         handler.removeCallbacks(liveSearch);if(messageSearch!=null)messageSearch.cancel();
         super.onPause();
     }
@@ -281,13 +282,14 @@ public class MainActivity extends Activity {
         boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(60));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
         FrameLayout badge=new FrameLayout(this);badge.setBackgroundColor(Color.TRANSPARENT);
         ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?Color.WHITE:INK);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?30:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(40),dp(32)));
-        TextView label=label(title,11,selected?Color.WHITE:INK,selected);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
+        boolean updateBadge=tab==3&&hasUnreadUpdate();TextView label=label(title,11,selected?Color.WHITE:INK,selected);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);if(updateBadge){android.text.SpannableString marked=new android.text.SpannableString(title+"  ●");marked.setSpan(new android.text.style.ForegroundColorSpan(Color.rgb(205,48,74)),title.length()+2,marked.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);marked.setSpan(new android.text.style.RelativeSizeSpan(.8f),title.length()+2,marked.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);label.setText(marked);}label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
         item.setBackground(ripple(selected?ACCENT:Color.TRANSPARENT,12));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
     }
 
     private void selectTab(int tab){
         if(tab==4&&currentTab==4){searchKeyboardRequested=true;searchKeyboardAttempts=0;focusSearchInput();return;}
         if(currentTab==4&&tab!=4&&searchInput!=null){android.view.inputmethod.InputMethodManager ime=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);if(ime!=null)ime.hideSoftInputFromWindow(searchInput.getWindowToken(),0);}
+        if(tab==3){String available=getSharedPreferences("app_updates",0).getString("available_version","");if(!available.isEmpty())getSharedPreferences("app_updates",0).edit().putString("seen_version",available).apply();}
         handler.removeCallbacks(liveSearch);messageSearch.cancel();browseGeneration++;currentTab=tab;
         searchKeyboardRequested=tab==4;searchKeyboardAttempts=0;
         if(tab==4){catalogQuery="";catalogSearchDraft="";}
@@ -713,7 +715,8 @@ public class MainActivity extends Activity {
         });
         toneCard.addView(toneChoices,match());
         toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);
-        addPage(settingsLink("بررسی به‌روزرسانی برنامه",R.drawable.ic_info,()->checkForUpdates(true)),8,0);
+        String availableVersion=getSharedPreferences("app_updates",0).getString("available_version","");String updateTitle=availableVersion.isEmpty()?"بررسی به‌روزرسانی برنامه":"به‌روزرسانی نسخهٔ "+fa(availableVersion)+(hasUnreadUpdate()?"  ●":"");
+        Button updateRow=settingsLink(updateTitle,R.drawable.ic_info,()->checkForUpdates(true));if(hasUnreadUpdate()){android.text.SpannableString marked=new android.text.SpannableString(updateTitle);int dot=marked.toString().lastIndexOf('●');if(dot>=0)marked.setSpan(new android.text.style.ForegroundColorSpan(Color.rgb(205,48,74)),dot,dot+1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);updateRow.setText(marked);}addPage(updateRow,8,0);
         LinearLayout destination = card(Color.WHITE);
         destination.addView(label("مقصد پیامک",15,ACCENT,true));
         destination.addView(fieldTitle("شمارهٔ همسرت"));
@@ -798,13 +801,15 @@ public class MainActivity extends Activity {
     private void checkForUpdates(boolean manual){
         AppUpdater.check(this,(release,error)->{
             if(isFinishing()||isDestroyed())return;
-            if(error!=null){if(manual)toast("بررسی به‌روزرسانی ممکن نشد؛ اتصال اینترنت را بررسی کن.");return;}
-            if(release==null){if(manual)toast("برنامه به‌روز است.");return;}
+            if(error!=null){if(manual)toast("بررسی به‌روزرسانی ناموفق بود: "+error);return;}
+            if(release==null){android.content.SharedPreferences updates=getSharedPreferences("app_updates",0);String cached=updates.getString("available_version","");if(!cached.isEmpty()&&AppUpdater.compare(cached,BuildConfig.VERSION_NAME)<=0){updates.edit().remove("available_version").remove("download_url").remove("sha256").putString("seen_version",cached).apply();if(currentTab==3)renderKeepingScroll();}if(manual)toast("برنامه به‌روز است.");return;}
+            android.content.SharedPreferences updates=getSharedPreferences("app_updates",0);updates.edit().putString("available_version",release.version).putString("download_url",release.url).putString("sha256",release.sha256).apply();if(currentTab==3)updates.edit().putString("seen_version",release.version).apply();renderKeepingScroll();if(!manual)return;
             new AlertDialog.Builder(this).setTitle("نسخهٔ تازه آماده است")
-                    .setMessage("نسخهٔ "+fa(release.version)+" منتشر شده. فایل نصب از گیت‌هاب دریافت و امضای آن بررسی می‌شود؛ نصب نهایی را خود اندروید از تو تأیید می‌گیرد.")
+                    .setMessage("نسخهٔ "+fa(release.version)+" روی سرور محصول آماده است. فایل دریافت‌شده پیش از نصب از نظر checksum و امضای برنامه بررسی می‌شود؛ نصب نهایی را خود اندروید از تو تأیید می‌گیرد.")
                     .setNegativeButton("بعداً",(d,w)->{}).setPositiveButton("دریافت به‌روزرسانی",(d,w)->{try{AppUpdater.download(this,release);updatePolls=0;handler.removeCallbacks(updatePoll);handler.postDelayed(updatePoll,2000);toast("دریافت به‌روزرسانی آغاز شد.");}catch(Exception e){toast("شروع دریافت به‌روزرسانی ممکن نشد.");}}).show();
         });
     }
+    private boolean hasUnreadUpdate(){android.content.SharedPreferences p=getSharedPreferences("app_updates",0);String available=p.getString("available_version","");return !available.isEmpty()&&!available.equals(p.getString("seen_version",""));}
 
     private void showLicenses(){
         LinearLayout content=dialogContent();

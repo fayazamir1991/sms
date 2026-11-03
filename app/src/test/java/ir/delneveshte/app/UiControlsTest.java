@@ -36,9 +36,11 @@ public class UiControlsTest {
         SQLiteDatabase old=(SQLiteDatabase)field.get(null);if(old!=null&&old.isOpen())old.close();field.set(null,null);app.deleteDatabase("messages.db");
         app.getSharedPreferences("settings",0).edit().clear().putString("nickname","نام قدیمی").commit();
         app.getSharedPreferences("cloud",0).edit().clear().putString("url","https://old.example.com").putBoolean("enabled",false).commit();
+        app.getSharedPreferences("app_updates",0).edit().clear().commit();
         app.getSharedPreferences("catalog_format",0).edit().putInt("version",3).commit();
     }
     private int inputs(View v){int n=v instanceof EditText?1:0;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)n+=inputs(g.getChildAt(i));}return n;}
+    private android.widget.TextView textContaining(View v,String part){if(v instanceof android.widget.TextView&&((android.widget.TextView)v).getText().toString().contains(part))return (android.widget.TextView)v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){android.widget.TextView found=textContaining(g.getChildAt(i),part);if(found!=null)return found;}}return null;}
     private void checkIconButtons(View v){
         if(v instanceof ImageButton){ImageButton b=(ImageButton)v;assertEquals(ImageView.ScaleType.CENTER_INSIDE,b.getScaleType());assertEquals(b.getLayoutParams().width,b.getLayoutParams().height);assertTrue(b.getMinimumWidth()>=48*app.getResources().getDisplayMetrics().density);assertNotNull(b.getContentDescription());}
         if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)checkIconButtons(g.getChildAt(i));}
@@ -66,6 +68,13 @@ public class UiControlsTest {
             View fieldContainer=(View)clear.getParent();assertEquals(0,fieldContainer.getPaddingTop());assertEquals(0,fieldContainer.getPaddingBottom());int size=Math.round(48*app.getResources().getDisplayMetrics().density);clear.measure(View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(size,View.MeasureSpec.EXACTLY));clear.layout(0,0,size,size);
             long now=android.os.SystemClock.uptimeMillis();android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,2,2,0),up=android.view.MotionEvent.obtain(now,now+10,android.view.MotionEvent.ACTION_UP,2,2,0);
             assertTrue(clear.dispatchTouchEvent(down));assertTrue(clear.dispatchTouchEvent(up));down.recycle();up.recycle();shadowOf(Looper.getMainLooper()).idle();assertEquals("",field.getText().toString());assertFalse(clear.isEnabled());assertTrue(CatalogBrowsingTest.options(a).isEmpty());
+        }
+    }
+    @Test public void updateBadgesAppearOnSettingsAndClearWhenSettingsOpens(){
+        app.getSharedPreferences("app_updates",0).edit().putString("available_version","0.25.0").putString("seen_version","0.24.0").commit();
+        try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
+            MainActivity a=c.get();android.widget.TextView nav=textContaining(a.getWindow().getDecorView(),"تنظیمات");assertNotNull(nav);assertTrue(nav.getText().toString().contains("●"));nav.performClick();shadowOf(Looper.getMainLooper()).idle();
+            assertEquals("0.25.0",app.getSharedPreferences("app_updates",0).getString("seen_version",""));android.widget.TextView section=textContaining(a.getWindow().getDecorView(),"به‌روزرسانی نسخه");assertNotNull(section);assertFalse(section.getText().toString().contains("●"));
         }
     }
     @Test public void settingsOnlyExposeDestinationCountAndGeneralAndroidHelp(){

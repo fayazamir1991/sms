@@ -273,11 +273,11 @@ public class MainActivity extends Activity {
     }
 
     private View navigationItem(String title,int iconResource,int tab,boolean primary){
-        boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(primary?64:52));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
-        FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(primary?Color.TRANSPARENT:(selected?PALE:Color.TRANSPARENT),12,0));
-        ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?30:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(primary?40:36),dp(primary?32:28)));
-        TextView label=label(title,primary?10:11,selected?ACCENT:MUTED,selected||primary);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
-        item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
+        boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(60));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
+        FrameLayout badge=new FrameLayout(this);badge.setBackgroundColor(Color.TRANSPARENT);
+        ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?Color.WHITE:INK);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?30:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(40),dp(32)));
+        TextView label=label(title,11,selected?Color.WHITE:INK,selected);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
+        item.setBackground(ripple(selected?ACCENT:Color.TRANSPARENT,12));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
     }
 
     private void selectTab(int tab){

@@ -276,7 +276,7 @@ public class MainActivity extends Activity {
         boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(primary?64:52));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
         FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(primary?PALE:(selected?PALE:Color.TRANSPARENT),primary?18:12,0));
         ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?24:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(primary?44:36),dp(primary?36:28)));
-        TextView label=label(title,primary?10:11,selected?ACCENT:MUTED,selected||primary);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
+        TextView label=label(title,primary?10:11,selected?ACCENT:MUTED,selected||primary);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);label.setOnClickListener(v->selectTab(tab));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
         item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
     }
 

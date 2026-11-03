@@ -1,5 +1,6 @@
 """Check the distributable APK itself on Android 14 with networking switched off."""
 from pathlib import Path
+import os
 import re
 import subprocess
 import xml.etree.ElementTree as ET
@@ -14,7 +15,12 @@ def screenshot(name):
     with (PREVIEWS / ('preview-' + name + '.png')).open('wb') as output:
         subprocess.run(['adb', 'exec-out', 'screencap', '-p'], stdout=output, check=True)
 
-APK = Path('release-input') / ('delneveshte-' + read_version()[1] + '.apk')
+APK = Path(os.environ.get('DISTRIBUTABLE_APK', str(Path('release-input') / ('delneveshte-' + read_version()[1] + '.apk'))))
+LEGACY_APK = Path('release-input') / 'delneveshte-0.8.1.apk'
+if not APK.is_file():
+    raise SystemExit('Distributable APK not found: ' + str(APK))
+if not LEGACY_APK.is_file():
+    raise SystemExit('Legacy update-test APK not found: ' + str(LEGACY_APK))
 
 def adb(*args):
     return subprocess.check_output(['adb', *args], text=True, stderr=subprocess.STDOUT)
@@ -58,7 +64,7 @@ def launch():
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
     return ui()
 
-adb('install', '-r', 'release-input/delneveshte-0.8.1.apk')
+adb('install', '-r', str(LEGACY_APK))
 adb('shell', 'settings', 'put', 'global', 'airplane_mode_on', '1')
 adb('shell', 'svc', 'wifi', 'disable')
 adb('shell', 'svc', 'data', 'disable')

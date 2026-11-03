@@ -117,9 +117,9 @@ print('PASS: header search action also opens an empty focused search and the key
 root=launch()
 compose=next(n for n in root.iter('node') if n.get('content-desc')=='نوشتن پیام')
 coords=list(map(int,re.findall(r'\d+',compose.get('bounds'))));width=int(adb('shell','wm','size').strip().split(':')[-1].strip().split('x')[0]);assert (coords[0]+coords[2])/2>width/2,'Compose must be on the physical right in RTL'
+bank=next(n for n in root.iter('node') if n.get('content-desc')=='بانک پیام‌ها');bounds=list(map(int,re.findall(r'\d+',bank.get('bounds'))));assert abs((bounds[0]+bounds[2])/2-width/2)<width/8,'Message bank must be centered'
 tap_node(root,text='تنظیمات');root=ui()
-toggle=next(n for n in root.iter('node') if n.get('class')=='android.widget.Switch');assert toggle.get('checked')=='false'
-tap_node(root,text='محاوره‌ای');root=ui();assert any(n.get('class')=='android.widget.Switch' and n.get('checked')=='true' for n in root.iter('node'))
-tap_node(root,text='رسمی');ui();screenshot('settings')
-print('PASS: compose is on the physical right and tone toggles in place without a dialog.')
+choices=[n for n in root.iter('node') if n.get('class')=='android.widget.RadioButton'];assert len(choices)==2 and any(n.get('text')=='محاوره‌ای' and n.get('checked')=='true' for n in choices)
+tap_node(root,text='رسمی');root=ui();assert any(n.get('text')=='رسمی' and n.get('checked')=='true' for n in root.iter('node') if n.get('class')=='android.widget.RadioButton');screenshot('settings')
+print('PASS: compose is on the physical right; message bank is centered; tone uses two radio buttons side by side.')
 print('PASS: actual APK previews captured: home, context menu, empty search, automatic keyboard and settings.')

@@ -263,18 +263,21 @@ public class MainActivity extends Activity {
     private View navigation() {
         LinearLayout container=vertical();container.setBackgroundColor(Color.WHITE);
         View line=new View(this);line.setBackgroundColor(LINE);container.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
-        LinearLayout nav=horizontal();nav.setPadding(dp(8),dp(2),dp(8),dp(2));
-        String[] titles={"پیشنهادها","جست‌وجو","صف ارسال","سابقه","تنظیمات"};
-        int[] tabs={0,4,1,2,3};int[] icons={R.drawable.ic_home,R.drawable.ic_search,R.drawable.ic_queue,R.drawable.ic_history,R.drawable.ic_settings};
-        for(int i=0;i<titles.length;i++){
-            final int tab=tabs[i];boolean selected=currentTab==tab;
-            LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(52));item.setPadding(0,dp(4),0,dp(4));item.setSelected(selected);
-            FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(selected?PALE:Color.TRANSPARENT,12,0));
-            ImageView icon=new ImageView(this);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(icons[i]);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);badge.addView(icon,new FrameLayout.LayoutParams(dp(UiMetrics.ICON),dp(UiMetrics.ICON),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(36),dp(28)));
-            TextView title=label(titles[i],12,selected?ACCENT:MUTED,selected);title.setGravity(Gravity.CENTER);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(title,lp);title.setOnClickListener(v->selectTab(tab));
-            item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(titles[i]);item.setOnClickListener(v->selectTab(tab));nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
-        }
+        LinearLayout nav=horizontal();nav.setPadding(dp(6),dp(2),dp(6),dp(2));nav.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout right=horizontal();right.addView(navigationItem("صف",R.drawable.ic_queue,1,false),new LinearLayout.LayoutParams(0,-2,1));right.addView(navigationItem("سابقه",R.drawable.ic_history,2,false),new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout left=horizontal();left.addView(navigationItem("تنظیمات",R.drawable.ic_settings,3,false),new LinearLayout.LayoutParams(0,-2,1));left.addView(navigationItem("جست‌وجو",R.drawable.ic_search,4,false),new LinearLayout.LayoutParams(0,-2,1));
+        nav.addView(right,new LinearLayout.LayoutParams(0,-2,1));
+        nav.addView(navigationItem("بانک پیام‌ها",R.drawable.ic_home,0,true),new LinearLayout.LayoutParams(dp(76),-2));
+        nav.addView(left,new LinearLayout.LayoutParams(0,-2,1));
         container.addView(nav);return container;
+    }
+
+    private View navigationItem(String title,int iconResource,int tab,boolean primary){
+        boolean selected=currentTab==tab;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);item.setMinimumHeight(dp(primary?64:52));item.setPadding(0,dp(3),0,dp(3));item.setSelected(selected);
+        FrameLayout badge=new FrameLayout(this);badge.setBackground(shape(primary?PALE:(selected?PALE:Color.TRANSPARENT),primary?18:12,0));
+        ImageView icon=new ImageView(this);icon.setTag(iconResource);icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);icon.setImageResource(iconResource);icon.setColorFilter(selected?AppThemeTokens.ACCENT_INK:MUTED);icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);int canvas=primary?24:UiMetrics.ICON;badge.addView(icon,new FrameLayout.LayoutParams(dp(canvas),dp(canvas),Gravity.CENTER));item.addView(badge,new LinearLayout.LayoutParams(dp(primary?44:36),dp(primary?36:28)));
+        TextView label=label(title,primary?10:11,selected?ACCENT:MUTED,selected||primary);label.setGravity(Gravity.CENTER);label.setMaxLines(2);label.setIncludeFontPadding(false);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(2);item.addView(label,lp);
+        item.setBackground(ripple(Color.TRANSPARENT,8));item.setContentDescription(title);item.setOnClickListener(v->selectTab(tab));return item;
     }
 
     private void selectTab(int tab){
@@ -692,18 +695,18 @@ public class MainActivity extends Activity {
         heading("تنظیمات ارسال", "تعداد و بازهٔ زمانی، به انتخاب تو");
         LinearLayout toneCard=card(Color.WHITE);
         toneCard.addView(label("لحن پیام‌ها",15,ACCENT,true));
-        android.widget.Switch toneToggle=new android.widget.Switch(this);
-        boolean formal="formal".equals(store.settings().tone);toneToggle.setText(formal?"رسمی":"محاوره‌ای");toneToggle.setTextSize(15);toneToggle.setTypeface(mediumFont);
-        toneToggle.setChecked(formal);toneToggle.setShowText(false);toneToggle.setSwitchMinWidth(dp(52));toneToggle.setMinHeight(dp(48));toneToggle.setPadding(dp(4),0,dp(4),0);
-        toneToggle.setTextColor(INK);toneToggle.setContentDescription("لحن پیام‌ها: "+(formal?"رسمی":"محاوره‌ای"));
-        toneToggle.setThumbTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{ACCENT,Color.WHITE}));
-        toneToggle.setTrackTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{PALE,Color.rgb(210,207,217)}));
-        toneToggle.setOnCheckedChangeListener((toggle,checked)->{
-            String value=checked?"formal":"colloquial";store.saveTone(value);draft.tone=value;
-            toggle.setText(checked?"رسمی":"محاوره‌ای");toggle.setContentDescription("لحن پیام‌ها: "+(checked?"رسمی":"محاوره‌ای"));
+        boolean formal="formal".equals(store.settings().tone);android.widget.RadioGroup toneChoices=new android.widget.RadioGroup(this);toneChoices.setOrientation(android.widget.RadioGroup.HORIZONTAL);toneChoices.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);toneChoices.setContentDescription("لحن پیام‌ها");
+        android.widget.RadioButton colloquial=new android.widget.RadioButton(this),formalButton=new android.widget.RadioButton(this);
+        colloquial.setText("محاوره‌ای");colloquial.setTag("colloquial");formalButton.setText("رسمی");formalButton.setTag("formal");
+        android.content.res.ColorStateList radioTint=new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{ACCENT,MUTED});
+        for(android.widget.RadioButton choice:new android.widget.RadioButton[]{colloquial,formalButton}){choice.setId(View.generateViewId());choice.setTextSize(14);choice.setTypeface(mediumFont);choice.setTextColor(INK);choice.setButtonTintList(radioTint);choice.setMinHeight(dp(UiMetrics.TOUCH));choice.setPadding(dp(6),0,dp(6),0);choice.setGravity(Gravity.CENTER_VERTICAL);toneChoices.addView(choice,new android.widget.RadioGroup.LayoutParams(0,-2,1));}
+        toneChoices.check(formal?formalButton.getId():colloquial.getId());
+        toneChoices.setOnCheckedChangeListener((group,checkedId)->{
+            android.widget.RadioButton selected=group.findViewById(checkedId);if(selected==null)return;String value=(String)selected.getTag();
+            store.saveTone(value);draft.tone=value;
             handler.removeCallbacks(liveSearch);messageSearch.cancel();browseGeneration++;catalogCursor=null;catalogRequested=false;refreshingSuggestions=false;renewOptions();
         });
-        toneCard.addView(toneToggle,match());
+        toneCard.addView(toneChoices,match());
         toneCard.addView(body("شعرها در هر دو لحن با متن اصلی شاعر نمایش داده می‌شوند.",12));page.addView(toneCard);
         LinearLayout destination = card(Color.WHITE);
         destination.addView(label("مقصد پیامک",15,ACCENT,true));

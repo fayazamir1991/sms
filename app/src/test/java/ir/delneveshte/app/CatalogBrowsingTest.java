@@ -64,7 +64,7 @@ public class CatalogBrowsingTest {
             MainActivity a=c.get();View root=a.getWindow().getDecorView();Pending old=next();assertTrue(options(a).contains(pair.getString("body_colloquial")));
             text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();text(root,"محاوره‌ای").performClick();
             shadowOf(Looper.getMainLooper()).idle();
-            assertEquals("formal",store.settings().tone);root=a.getWindow().getDecorView();text(root,"پیشنهادها").performClick();Pending current=next();assertTrue(current.path.contains("tone=formal"));
+            assertEquals("formal",store.settings().tone);root=a.getWindow().getDecorView();text(root,"بانک پیام‌ها").performClick();Pending current=next();assertTrue(current.path.contains("tone=formal"));
             current.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));await(()->!refreshing(a));
             old.result.complete(new JSONObject().put("messages",new JSONArray().put(pair)).put("has_more",false).put("next_cursor",JSONObject.NULL));Thread.sleep(30);shadowOf(Looper.getMainLooper()).idle();
             assertEquals(java.util.Collections.singletonList(pair.getString("body_formal")),options(a));

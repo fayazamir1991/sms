@@ -46,11 +46,15 @@ public class UiControlsTest {
     private static class TextViewCheck {
         static void assertChipSpacing(android.widget.TextView chip,float density){assertTrue(chip.getPaddingLeft()>=Math.round(12*density));assertTrue(chip.getPaddingRight()>=Math.round(12*density));}
     }
-    @Test public void composeIsOnThePhysicalRightAndToneUsesANativeSwitch() throws Exception {
+    @Test public void navigationCentersTheBankAndToneUsesSideBySideRadioChoices() throws Exception {
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();View root=a.getWindow().getDecorView();View compose=CatalogBrowsingTest.described(root,"نوشتن پیام");
             android.widget.FrameLayout.LayoutParams lp=(android.widget.FrameLayout.LayoutParams)compose.getLayoutParams();assertEquals(android.view.Gravity.RIGHT,android.view.Gravity.getAbsoluteGravity(lp.gravity,View.LAYOUT_DIRECTION_RTL)&android.view.Gravity.HORIZONTAL_GRAVITY_MASK);
-            CatalogBrowsingTest.text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();android.widget.Switch tone=(android.widget.Switch)CatalogBrowsingTest.text(root,"محاوره‌ای");assertFalse(tone.isChecked());tone.performClick();assertTrue(tone.isChecked());assertEquals("formal",new AppStore(app).settings().tone);assertEquals("رسمی",tone.getText().toString());tone.performClick();assertEquals("colloquial",new AppStore(app).settings().tone);
+            View home=CatalogBrowsingTest.text(root,"بانک پیام‌ها"),queue=CatalogBrowsingTest.text(root,"صف"),history=CatalogBrowsingTest.text(root,"سابقه"),search=CatalogBrowsingTest.text(root,"جست‌وجو");ImageView homeIcon=(ImageView)((ViewGroup)((ViewGroup)home.getParent()).getChildAt(0)).getChildAt(0);assertEquals(Integer.valueOf(R.drawable.ic_home),homeIcon.getTag());assertTrue(homeIcon.getContentDescription()==null);
+            assertTrue(home.getContentDescription().toString().contains("بانک پیام‌ها"));
+            int w=Math.round(360*app.getResources().getDisplayMetrics().density),h=Math.round(800*app.getResources().getDisplayMetrics().density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
+            android.graphics.Rect hb=new android.graphics.Rect(),qb=new android.graphics.Rect(),yb=new android.graphics.Rect(),xb=new android.graphics.Rect();home.getGlobalVisibleRect(hb);queue.getGlobalVisibleRect(qb);history.getGlobalVisibleRect(yb);search.getGlobalVisibleRect(xb);assertTrue(Math.abs(hb.centerX()-w/2)<w/8);assertTrue(qb.centerX()>hb.centerX());assertTrue(yb.centerX()>hb.centerX());assertTrue(xb.centerX()<hb.centerX());
+            CatalogBrowsingTest.text(root,"تنظیمات").performClick();root=a.getWindow().getDecorView();android.widget.RadioButton colloquial=(android.widget.RadioButton)CatalogBrowsingTest.text(root,"محاوره‌ای"),formal=(android.widget.RadioButton)CatalogBrowsingTest.text(root,"رسمی");assertTrue(colloquial.isChecked());assertFalse(formal.isChecked());assertEquals("formal",new AppStore(app).settings().tone);formal.performClick();assertTrue(formal.isChecked());assertEquals("formal",new AppStore(app).settings().tone);colloquial.performClick();assertEquals("colloquial",new AppStore(app).settings().tone);
         }
     }
     @Test public void searchClearHasASquareTouchTargetAndClearsLiveResults() throws Exception {
@@ -96,7 +100,7 @@ public class UiControlsTest {
         try(ActivityController<MessageActionsTest.OfflineActivity> c=Robolectric.buildActivity(MessageActionsTest.OfflineActivity.class).setup()){
             MainActivity a=c.get();CatalogBrowsingTest.text(a.getWindow().getDecorView(),"تنظیمات").performClick();shadowOf(Looper.getMainLooper()).idle();View root=a.getWindow().getDecorView();float density=resources.getDisplayMetrics().density;int w=Math.round(320*density),h=Math.round(640*density);
             root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);checkTextButtonsFit(root);
-            View nav=(View)CatalogBrowsingTest.text(root,"پیشنهادها").getParent().getParent().getParent();Field scroll=MainActivity.class.getDeclaredField("pageScroll");scroll.setAccessible(true);View content=(View)scroll.get(a);Rect contentRect=new Rect(),navRect=new Rect();assertTrue("Content is outside the test window",content.getGlobalVisibleRect(contentRect));assertTrue("Navigation is outside the test window",nav.getGlobalVisibleRect(navRect));assertTrue("Navigation overlaps content",contentRect.bottom<=navRect.top);
+            View nav=(View)CatalogBrowsingTest.text(root,"بانک پیام‌ها").getParent().getParent().getParent();Field scroll=MainActivity.class.getDeclaredField("pageScroll");scroll.setAccessible(true);View content=(View)scroll.get(a);Rect contentRect=new Rect(),navRect=new Rect();assertTrue("Content is outside the test window",content.getGlobalVisibleRect(contentRect));assertTrue("Navigation is outside the test window",nav.getGlobalVisibleRect(navRect));assertTrue("Navigation overlaps content",contentRect.bottom<=navRect.top);
         }
     }
 }

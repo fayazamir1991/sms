@@ -82,7 +82,8 @@ if(process.env.SMOKE_PHASE==='write'){
  const apk=Buffer.from('test-apk-persisted-across-containers'),sha256=createHash('sha256').update(apk).digest('hex');
  const publish=await fetch(base+'/api/admin/app-releases',{method:'POST',headers:{Authorization:'Bearer '+process.env.SMOKE_RELEASE_UPLOAD_TOKEN,'X-Release-Version':'0.25.0','X-APK-SHA256':sha256,'Content-Type':'application/vnd.android.package-archive'},body:apk});assert.equal(publish.status,201);
  const release=await (await fetch(base+'/api/app/latest')).json();assert.equal(release.version,'0.25.0');assert.equal(release.sha256,sha256);
- assert.deepEqual(Buffer.from(await (await fetch(release.url)).arrayBuffer()),apk);
+ assert.equal(release.url,origin+'/api/app/releases/delneveshte-v0.25.0.apk');
+ assert.deepEqual(Buffer.from(await (await fetch(base+new URL(release.url).pathname)).arrayBuffer()),apk);
  const auth='Bearer 141d6c45-f0b2-4c6b-8d6f-d31bcc1acd4e.'+'c'.repeat(64);
  const post=(path,body)=>fetch(base+path,{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(body)});
  assert.equal((await post('/api/v1/installations/register',{app_version:'0.3.0'})).status,201);
@@ -103,7 +104,7 @@ if(process.env.SMOKE_PHASE==='write'){
  assert.equal((await fetch(base+'/api/admin/catalog',{method:'POST',headers,body:JSON.stringify({...row,body:'متن ویرایش‌شده در آزمون 🌷',active:true})})).status,200);
 }else{
  const release=await (await fetch(base+'/api/app/latest')).json();assert.equal(release.version,'0.25.0');
- assert.deepEqual(Buffer.from(await (await fetch(release.url)).arrayBuffer()),Buffer.from('test-apk-persisted-across-containers'));
+ assert.deepEqual(Buffer.from(await (await fetch(base+new URL(release.url).pathname)).arrayBuffer()),Buffer.from('test-apk-persisted-across-containers'));
  assert.equal(stats.installations,1);assert.equal(stats.sent,1);
  const sent=await (await fetch(base+'/api/admin/tables/sent',{headers})).json();assert.equal(sent.rows[0].recipient,'+989121234567');assert.equal(sent.rows[0].body,'کنارت آرامم 🫂❤️');
  const rows=await (await fetch(base+'/api/admin/tables/catalog',{headers})).json();assert.ok(rows.rows.some(r=>r.body==='متن ویرایش‌شده در آزمون 🌷'));

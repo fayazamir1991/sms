@@ -103,7 +103,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: python3 scripts/check-offline-startup.py
       - name: Preserve actual APK interface previews
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outputs.available == 'true'
         continue-on-error: true
         run: |
           preview_dir="docs/previews/v$(python3 scripts/version.py)"

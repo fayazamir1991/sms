@@ -13,6 +13,7 @@ image = sys.argv[1] if len(sys.argv) > 1 else 'delneveshte-test'
 name = 'sms-smoke-' + secrets.token_hex(5)
 volume = name + '-data'
 password = secrets.token_urlsafe(32)
+release_token = secrets.token_urlsafe(48)
 
 def docker(*args, capture=True):
     result = subprocess.run(['docker', *args], text=True, capture_output=capture)
@@ -30,11 +31,16 @@ with tempfile.TemporaryDirectory() as directory:
         'DATA_ENCRYPTION_KEY=' + base64.b64encode(secrets.token_bytes(32)).decode(),
         'SESSION_SIGNING_KEY=' + secrets.token_urlsafe(48),
         'ADMIN_TOKEN_SHA256=' + hashlib.sha256(password.encode()).hexdigest(),
+        'APP_RELEASE_UPLOAD_TOKEN_SHA256=' + hashlib.sha256(release_token.encode()).hexdigest(),
         'SMOKE_ADMIN_PASSWORD=' + password,
+        'SMOKE_RELEASE_UPLOAD_TOKEN=' + release_token,
     ]) + '\n')
     env.chmod(0o600)
 
     def start():
+        # `docker stop` with --rm removes a container asynchronously; remove it
+        # explicitly before reusing the same name with the persistent volume.
+        subprocess.run(['docker', 'rm', '-f', name], capture_output=True)
         docker('run', '--rm', '-d', '--name', name, '--mount', f'type=volume,src={volume},dst=/data', '--env-file', str(env), image)
         for _ in range(45):
             probe = subprocess.run(['docker', 'exec', name, 'node', '-e', "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], capture_output=True)
@@ -45,6 +51,7 @@ with tempfile.TemporaryDirectory() as directory:
 
     smoke = r'''
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 const origin='https://sms.example.test',base='http://127.0.0.1:8080';
 const login=await fetch(base+'/api/admin/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({password:process.env.SMOKE_ADMIN_PASSWORD})});
 assert.equal(login.status,200);
@@ -72,6 +79,10 @@ const font=await fetch(base+'/fonts/Vazirmatn.woff2');assert.equal(font.status,2
 assert.match(await (await fetch(base+'/admin.js')).text(),/use strict/);
 assert.equal((await fetch(base+'/api/admin/stats')).status,401);
 if(process.env.SMOKE_PHASE==='write'){
+ const apk=Buffer.from('test-apk-persisted-across-containers'),sha256=createHash('sha256').update(apk).digest('hex');
+ const publish=await fetch(base+'/api/admin/app-releases',{method:'POST',headers:{Authorization:'Bearer '+process.env.SMOKE_RELEASE_UPLOAD_TOKEN,'X-Release-Version':'0.25.0','X-APK-SHA256':sha256,'Content-Type':'application/vnd.android.package-archive'},body:apk});assert.equal(publish.status,201);
+ const release=await (await fetch(base+'/api/app/latest')).json();assert.equal(release.version,'0.25.0');assert.equal(release.sha256,sha256);
+ assert.deepEqual(Buffer.from(await (await fetch(release.url)).arrayBuffer()),apk);
  const auth='Bearer 141d6c45-f0b2-4c6b-8d6f-d31bcc1acd4e.'+'c'.repeat(64);
  const post=(path,body)=>fetch(base+path,{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(body)});
  assert.equal((await post('/api/v1/installations/register',{app_version:'0.3.0'})).status,201);
@@ -91,6 +102,8 @@ if(process.env.SMOKE_PHASE==='write'){
  const row=catalog.rows[0];
  assert.equal((await fetch(base+'/api/admin/catalog',{method:'POST',headers,body:JSON.stringify({...row,body:'متن ویرایش‌شده در آزمون 🌷',active:true})})).status,200);
 }else{
+ const release=await (await fetch(base+'/api/app/latest')).json();assert.equal(release.version,'0.25.0');
+ assert.deepEqual(Buffer.from(await (await fetch(release.url)).arrayBuffer()),Buffer.from('test-apk-persisted-across-containers'));
  assert.equal(stats.installations,1);assert.equal(stats.sent,1);
  const sent=await (await fetch(base+'/api/admin/tables/sent',{headers})).json();assert.equal(sent.rows[0].recipient,'+989121234567');assert.equal(sent.rows[0].body,'کنارت آرامم 🫂❤️');
  const rows=await (await fetch(base+'/api/admin/tables/catalog',{headers})).json();assert.ok(rows.rows.some(r=>r.body==='متن ویرایش‌شده در آزمون 🌷'));

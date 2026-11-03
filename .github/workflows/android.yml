@@ -67,13 +67,18 @@ jobs:
           candidate="release-input/delneveshte-$(python3 scripts/version.py).apk"
           if test -f "$candidate"; then echo "path=$candidate" >> "$GITHUB_OUTPUT"; fi
       - name: Restore the original signing key for compatible updates
-        if: github.event_name != 'pull_request' && steps.prepared.outputs.path == ''
+        if: github.event_name != 'pull_request' && steps.prepared.outputs.path == '' && env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_SIGNING_PASSWORD != ''
         run: python3 scripts/restore-signing.py
       - name: Build and verify the distributable APK
+        id: distributable
         if: github.event_name != 'pull_request'
         env:
           PREPARED_APK: ${{ steps.prepared.outputs.path }}
         run: |
+          if test -z "$PREPARED_APK" && { test -z "$ANDROID_KEYSTORE_BASE64" || test -z "$ANDROID_SIGNING_PASSWORD"; }; then
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if test -n "$PREPARED_APK"; then
             python3 scripts/verify-prepared-apk.py
             mkdir -p app/build/outputs/apk/release
@@ -82,11 +87,12 @@ jobs:
             gradle --no-daemon :app:assembleRelease :app:lintRelease
           fi
           python3 scripts/verify-apk-signing.py app/build/outputs/apk/release/app-release.apk
+          echo 'available=true' >> "$GITHUB_OUTPUT"
       - name: Enable KVM for Android 14 startup verification
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.distributable.outputs.available == 'true'
         run: sudo chmod 666 /dev/kvm
       - name: Verify the signed APK opens with messages and switches categories offline on Android 14
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.distributable.outputs.available == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -110,7 +116,7 @@ jobs:
           fi
       - name: Upload APK to the persistent application server
         id: server_upload
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.APP_RELEASE_UPLOAD_TOKEN != ''
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outputs.available == 'true' && env.APP_RELEASE_UPLOAD_TOKEN != ''
         run: |
           version="$(python3 scripts/version.py)"
           apk="app/build/outputs/apk/release/app-release.apk"
@@ -123,13 +129,16 @@ jobs:
             -H 'Content-Type: application/vnd.android.package-archive' \
             --data-binary "@$apk"
       - name: Report missing persistent-server upload credential
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && env.APP_RELEASE_UPLOAD_TOKEN == ''
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outputs.available == 'true' && env.APP_RELEASE_UPLOAD_TOKEN == ''
         run: echo '::warning::Set GitHub Actions secret APP_RELEASE_UPLOAD_TOKEN and matching APP_RELEASE_UPLOAD_TOKEN_SHA256 on the app server to publish update APKs to persistent storage.'
+      - name: Report missing preserved signing key
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outcome == 'success' && steps.distributable.outputs.available != 'true' && steps.prepared.outputs.path == ''
+        run: echo '::warning::Tests passed, but distribution is held. Restore ANDROID_KEYSTORE_BASE64 and ANDROID_SIGNING_PASSWORD so future APKs can update the installed app with the same signature.'
       - name: Publish GitHub releases
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.server_upload.outcome == 'success'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outputs.available == 'true' && steps.server_upload.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/publish-releases.sh
       - name: Explain why publication waits for server credentials
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.server_upload.outcome != 'success'
-        run: echo '::warning::The APK was not uploaded to persistent server storage, so no release tag was created. Configure APP_RELEASE_UPLOAD_TOKEN in GitHub and its SHA-256 on the server, then rerun this workflow.'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.distributable.outputs.available == 'true' && steps.server_upload.outcome == 'failure'
+        run: echo '::warning::The APK was not uploaded to persistent server storage, so no release tag was created. Check APP_RELEASE_UPLOAD_TOKEN in GitHub and its matching SHA-256 on the server, then rerun this workflow.'
